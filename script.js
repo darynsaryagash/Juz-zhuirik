@@ -170,132 +170,85 @@ function addClass() {
 
 function deleteClass(cls) {
     if (!isAdmin) return;
-    if (!confirm(`"${cls}" сыныбын өшіру?`)) return;
-    const newStudents = students.filter(s => s.class !== cls);
-    const obj = {}; newStudents.forEach(s => obj[s.id] = s);
-    if (activeTab === cls) activeTab = "school";
-    db.ref("/classes").set(classes.filter(c => c !== cls));
-    db.ref("/students").set(Object.keys(obj).length ? obj : null);
+    if (!confirm(`"${cls}" сыныбын өшіресіз бе?`)) return;
+    const newClasses = classes.filter(c => c !== cls);
+    db.ref("/classes").set(newClasses);
 }
 
 function addStudent() {
     if (!isAdmin) return;
-    const name = document.getElementById("newName").value.trim();
-    const cls = document.getElementById("newClass").value;
-    const baseScoreInput = document.getElementById("newBaseScore").value;
-    const baseScore = parseInt(baseScoreInput) || 0;
-    if (!name || !cls) return alert("Аты-жөні мен сыныбын таңдаңыз!");
+    const nameInp = document.getElementById("newStudentName");
+    const classInp = document.getElementById("newStudentClass");
+    const name = nameInp.value.trim();
+    const cls = classInp.value;
+    if (!name) return alert("Оқушы атын жазыңыз!");
+    if (!cls) return alert("Сынып таңдаңыз!");
     const id = nextId;
-    const scores = {}; for (let k in CRITERIA) scores[k] = 0;
-    db.ref(`/students/${id}`).set({ id, name, class: cls, scores, baseScore });
+    db.ref(`/students/${id}`).set({ id, name, class: cls, baseScore: BASE_SCORE, scores: {} });
     db.ref("/nextId").set(id + 1);
-    document.getElementById("newName").value = "";
-    document.getElementById("newBaseScore").value = "";
+    nameInp.value = "";
 }
 
-function editBaseScore(sid) {
+function deleteStudent(id) {
     if (!isAdmin) return;
-    const s = students.find(s => s.id === sid); if (!s) return;
-    const val = prompt(`"${s.name}" оқушысының бастапқы баллы:`, s.baseScore || 0);
+    if (!confirm("Оқушыны өшіресіз бе?")) return;
+    db.ref(`/students/${id}`).remove();
+}
+
+function editBaseScore(id) {
+    if (!isAdmin) return;
+    const s = students.find(s => s.id === id);
+    if (!s) return;
+    const val = prompt(`${s.name} үшін бастапқы балл:`, s.baseScore || 0);
     if (val === null) return;
     const num = parseInt(val);
-    if (isNaN(num)) return alert("Сан енгізіңіз!");
-    db.ref(`/students/${sid}/baseScore`).set(num);
+    if (isNaN(num)) return alert("Сан жазыңыз!");
+    db.ref(`/students/${id}/baseScore`).set(num);
 }
 
-const scoreUpdateQueue = {};
-
-function updateScore(sid, key, adding) {
+function updateScore(id, key, increment) {
     if (!isAdmin) return;
-    const s = students.find(s => s.id === sid); if (!s) return;
-    const step = Math.abs(CRITERIA[key]);
-
-    // Debounce: накапливаем изменения и отправляем через 400мс
-    const queueKey = `${sid}_${key}`;
-    if (!scoreUpdateQueue[queueKey]) {
-        scoreUpdateQueue[queueKey] = { sid, key, delta: 0, base: s.scores[key] || 0 };
-    }
-    scoreUpdateQueue[queueKey].delta += adding ? step : -step;
-
-    // Визуально обновляем сразу
-    const newVal = scoreUpdateQueue[queueKey].base + scoreUpdateQueue[queueKey].delta;
-    const allVals = document.querySelectorAll(`[data-sid="${sid}"][data-key="${key}"]`);
-    allVals.forEach(el => {
-        el.textContent = newVal;
-        el.className = `score-val ${newVal > 0 ? 'pos' : newVal < 0 ? 'neg' : ''}`;
-    });
-
-    clearTimeout(scoreUpdateQueue[queueKey].timer);
-    scoreUpdateQueue[queueKey].timer = setTimeout(() => {
-        const q = scoreUpdateQueue[queueKey];
-        const finalVal = q.base + q.delta;
-
-        const open = {};
-        document.querySelectorAll('.criteria-body').forEach((b, i) => open[i] = b.style.display !== 'none');
-
-        db.ref(`/students/${q.sid}/scores/${q.key}`).set(finalVal).then(() => {
-            delete scoreUpdateQueue[queueKey];
-            setTimeout(() => {
-                document.querySelectorAll('.criteria-body').forEach((b, i) => {
-                    if (open[i]) {
-                        b.style.display = 'block';
-                        const btn = b.previousElementSibling;
-                        if (btn?.classList.contains('toggle-btn')) {
-                            btn.textContent = '🔼 Жабу';
-                            btn.classList.add('open');
-                        }
-                    }
-                });
-            }, 300);
-        });
-    }, 400);
-}
-
-function deleteStudent(sid) {
-    if (!isAdmin) return;
-    const s = students.find(s => s.id === sid); if (!s) return;
-    if (confirm(`"${s.name}" өшірілсін бе?`)) db.ref(`/students/${sid}`).remove();
+    const s = students.find(s => s.id === id);
+    if (!s) return;
+    const current = s.scores?.[key] || 0;
+    const delta = CRITERIA[key] || 0;
+    const newVal = increment ? current + delta : current - delta;
+    db.ref(`/students/${id}/scores/${key}`).set(newVal);
 }
 
 function totalScore(s) {
-    let sum = BASE_SCORE + (s.baseScore || 0);
-    for (let k in CRITERIA) sum += (s.scores?.[k] || 0);
-    return sum;
+    const base = s.baseScore || 0;
+    const sc = s.scores ? Object.values(s.scores).reduce((a, b) => a + b, 0) : 0;
+    return base + sc;
 }
 
 function classTotal(cls) {
-    let earned = 0;
-    students.filter(s => s.class === cls).forEach(s => {
-        for (let k in CRITERIA) earned += (s.scores?.[k] || 0);
-    });
-    return earned;
+    return students.filter(s => s.class === cls).reduce((sum, s) => sum + totalScore(s), 0);
 }
 
-function setTab(tab) { activeTab = tab; renderTabs(); renderStudents(); }
-
 function renderTabs() {
-    const c = document.getElementById("tabs");
-    let html = `<button class="tab-btn ${activeTab==='school'?'active':''}" onclick="setTab('school')">🏫 Мектеп</button>`;
-    classes.forEach(cls => html += `<button class="tab-btn ${activeTab===cls?'active':''}" onclick="setTab('${cls}')">${cls}</button>`);
-    html += `<button class="tab-btn ${activeTab==='top'?'active':''}" onclick="setTab('top')">🏆 Топ</button>`;
-    html += `<button class="tab-btn ${activeTab==='classrating'?'active':''}" onclick="setTab('classrating')">📊 Сыныптар</button>`;
-    c.innerHTML = html;
+    const tabs = document.getElementById("tabs");
+    if (!tabs) return;
+    let html = `
+        <button class="tab ${activeTab==='school'?'active':''}" onclick="setTab('school')">🏫 Мектеп</button>
+        <button class="tab ${activeTab==='top'?'active':''}" onclick="setTab('top')">🏆 Топ</button>
+        <button class="tab ${activeTab==='classes'?'active':''}" onclick="setTab('classes')">📊 Сыныптар</button>
+    `;
+    classes.forEach(cls => {
+        html += `<button class="tab ${activeTab===cls?'active':''}" onclick="setTab('${cls}')">${cls}</button>`;
+    });
+    tabs.innerHTML = html;
+}
 
-    const sel = document.getElementById("newClass");
-    if (sel) sel.innerHTML = `<option value="">— Сынып —</option>` + classes.map(c => `<option value="${c}">${c}</option>`).join("");
-
-    const delBtn = document.getElementById("deleteClassBtn");
-    if (delBtn) {
-        if (activeTab !== "school" && activeTab !== "top" && activeTab !== "classrating") {
-            delBtn.textContent = `🗑 "${activeTab}" сыныбын өшіру`;
-            delBtn.classList.remove("hidden");
-        } else { delBtn.classList.add("hidden"); }
-    }
+function setTab(tab) {
+    activeTab = tab;
+    renderTabs();
+    renderStudents();
 }
 
 function renderStudents() {
     if (activeTab === "top") { renderTopPage(); return; }
-    if (activeTab === "classrating") { renderClassRating(); return; }
+    if (activeTab === "classes") { renderClassRating(); return; }
 
     const container = document.getElementById("studentList");
     const top3box = document.getElementById("top3");
@@ -360,7 +313,6 @@ function renderStudents() {
         container.appendChild(card);
     });
 
-    // Топ-3 балл бойынша
     const sortedByScore = [...pool].sort((a, b) => totalScore(b) - totalScore(a));
     const withScore = sortedByScore.filter(s => totalScore(s) > 0);
     const allEqual = sortedByScore.length > 0 && sortedByScore.every(s => totalScore(s) === totalScore(sortedByScore[0]));
@@ -398,11 +350,10 @@ function renderTopPage() {
 
     html += `<div class="top-header red" style="margin-top:30px">⚠️ Ең төмен балл</div>`;
     lowest.forEach((s, i) => {
-        const prev = i > 0 ? totalScore(lowest[i-1]) : null;
         html += `<div class="card" style="border-left:3px solid var(--red);animation-delay:${i*0.07}s">
             <div class="card-header">
                 <div><span class="card-name">${s.name}</span><span class="card-class">${s.class}</span></div>
-                <div class="card-score-badge ${totalScore(s) < 0 ? 'negative' : ''}" style="background:linear-gradient(135deg,var(--red),#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${totalScore(s)} балл</div>
+                <div class="card-score-badge" style="background:linear-gradient(135deg,var(--red),#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${totalScore(s)} балл</div>
             </div>
         </div>`;
     });
@@ -466,6 +417,4 @@ function toggleCriteria(btn) {
     body.style.display = isOpen ? 'none' : 'block';
     btn.textContent = isOpen ? '📋 Критерийлер' : '🔼 Жабу';
     btn.classList.toggle('open', !isOpen);
-}
-sOpen);
 }
