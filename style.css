@@ -90,14 +90,21 @@ body {
     background: rgba(10,10,15,0.85); backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
     overflow-x: auto; padding: 0 20px;
+    /* Скрываем scrollbar но оставляем скролл */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
+.tabs-wrap::-webkit-scrollbar { display: none; }
+
 .tabs-bar {
     display: flex; gap: 4px;
     max-width: 900px; margin: 0 auto;
     padding: 10px 0;
 }
 .tab-btn {
-    padding: 8px 18px; border-radius: 50px; border: 1px solid transparent;
+    padding: 8px 18px; border-radius: 50px;
+    /* ИСПРАВЛЕНИЕ: убрали border: 1px solid transparent — он давал квадратный вид на мобилке */
+    border: none;
     background: transparent; color: var(--text2);
     font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
     cursor: pointer; white-space: nowrap;
@@ -421,3 +428,14 @@ body {
 }
 .btn-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,106,255,0.6); }
 .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* ── Мобильные исправления для tabs ── */
+@media(max-width: 600px) {
+    .tab-btn {
+        padding: 7px 12px;
+        font-size: 12px;
+    }
+    .tabs-bar {
+        gap: 2px;
+    }
+}
