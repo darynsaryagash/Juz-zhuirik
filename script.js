@@ -105,6 +105,7 @@ const CRITERIA = {};
 SECTIONS.forEach(s => s.criteria.forEach(c => { CRITERIA[c.key] = c.score; }));
 
 let isAdmin = false, students = [], classes = [], nextId = 1, activeTab = "school";
+let updatingScore = false; // флаг: идёт обновление балла, не перерисовывать всё
 
 auth.onAuthStateChanged(user => {
     isAdmin = !!user;
@@ -119,7 +120,14 @@ db.ref("/").on("value", snap => {
     students = d.students ? Object.values(d.students) : [];
     classes = d.classes || [];
     nextId = d.nextId || 1;
-    renderTabs(); renderStudents();
+
+    if (updatingScore) {
+        // Только обновляем значения в DOM без перерисовки
+        updatingScore = false;
+        updateScoresInDOM();
+    } else {
+        renderTabs(); renderStudents();
+    }
 });
 
 function adminLogin() {
@@ -216,7 +224,29 @@ function updateScore(id, key, increment) {
     const current = s.scores?.[key] || 0;
     const delta = CRITERIA[key] || 0;
     const newVal = increment ? current + delta : current - delta;
+    updatingScore = true;
     db.ref(`/students/${id}/scores/${key}`).set(newVal);
+}
+
+// Обновляет только цифры баллов в DOM — без закрытия критериев
+function updateScoresInDOM() {
+    students.forEach(s => {
+        // Обновляем каждый score-val для этого ученика
+        document.querySelectorAll(`.score-val[data-sid="${s.id}"]`).forEach(el => {
+            const key = el.getAttribute('data-key');
+            const val = s.scores?.[key] || 0;
+            el.textContent = val;
+            el.className = 'score-val' + (val > 0 ? ' pos' : val < 0 ? ' neg' : '');
+        });
+
+        // Обновляем общий балл на карточке
+        const badge = document.querySelector(`.card-score-badge[data-sid="${s.id}"]`);
+        if (badge) {
+            const score = totalScore(s);
+            badge.textContent = `${score} балл`;
+            badge.className = 'card-score-badge' + (score > 0 ? ' pos' : score < 0 ? ' neg' : '');
+        }
+    });
 }
 
 function totalScore(s) {
@@ -292,14 +322,38 @@ function renderStudents() {
         return;
     }
 
+    // Сортируем по баллу (по убыванию) для вкладки "Мектеп" и классов
+    const sortedFiltered = [...filtered].sort((a, b) => totalScore(b) - totalScore(a));
+
+    // Считаем места с учётом одинаковых баллов (если одинаковый балл — одинаковое место)
+    // Места считаются по всему pool (не только по filtered), чтобы при поиске место не менялось
+    const sortedPool = [...pool].sort((a, b) => totalScore(b) - totalScore(a));
+    const rankMap = {};
+    let rank = 1;
+    sortedPool.forEach((s, idx) => {
+        if (idx > 0 && totalScore(s) === totalScore(sortedPool[idx - 1])) {
+            rankMap[s.id] = rankMap[sortedPool[idx - 1].id];
+        } else {
+            rankMap[s.id] = rank;
+        }
+        rank++;
+    });
+
     container.innerHTML = "";
-    filtered.forEach((s, idx) => {
+    sortedFiltered.forEach((s, idx) => {
         const card = document.createElement("div");
         card.className = "card";
         card.style.animationDelay = `${idx * 0.05}s`;
 
         const score = totalScore(s);
         const scoreClass = score > 0 ? 'pos' : score < 0 ? 'neg' : '';
+        const place = rankMap[s.id];
+
+        // Стиль номера места: золото для 1-3, серебро/бронза, обычный для остальных
+        let placeStyle = 'color:var(--text2);';
+        if (place === 1) placeStyle = 'color:#FFD700;';
+        else if (place === 2) placeStyle = 'color:#C0C0C0;';
+        else if (place === 3) placeStyle = 'color:#CD7F32;';
 
         let criteriaHtml = '';
         SECTIONS.forEach(sec => {
@@ -324,10 +378,13 @@ function renderStudents() {
 
         card.innerHTML = `
             <div class="card-header">
-                <div><span class="card-name">${s.name}</span><span class="card-class">${s.class}</span></div>
+                <div style="display:flex;align-items:center;gap:14px">
+                    <span style="font-family:'Unbounded',cursive;font-size:22px;font-weight:800;min-width:40px;${placeStyle}">${place}.</span>
+                    <div><span class="card-name">${s.name}</span><span class="card-class">${s.class}</span></div>
+                </div>
                 <div style="display:flex;align-items:center;gap:10px">
                     ${s.baseScore ? `<span style="font-size:12px;color:var(--text2);background:rgba(255,255,255,0.06);padding:4px 10px;border-radius:20px;">🎯 Бастапқы: ${s.baseScore}</span>` : ''}
-                    <div class="card-score-badge ${scoreClass}">${score} балл</div>
+                    <div class="card-score-badge ${scoreClass}" data-sid="${s.id}">${score} балл</div>
                 </div>
             </div>
             <button class="toggle-btn" onclick="toggleCriteria(this)">📋 Критерийлер</button>
