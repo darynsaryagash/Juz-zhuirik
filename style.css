@@ -26,13 +26,10 @@ body {
     overflow-x: hidden;
 }
 
-/* ── Фон ── */
 .bg-orbs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
 .orb {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.25;
+    position: absolute; border-radius: 50%;
+    filter: blur(80px); opacity: 0.25;
     animation: orbFloat 8s ease-in-out infinite;
 }
 .orb1 { width: 500px; height: 500px; background: var(--accent); top: -150px; left: -100px; animation-delay: 0s; }
@@ -90,7 +87,6 @@ body {
     background: rgba(10,10,15,0.85); backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
     overflow-x: auto; padding: 0 20px;
-    /* Скрываем scrollbar но оставляем скролл */
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
@@ -101,10 +97,10 @@ body {
     max-width: 900px; margin: 0 auto;
     padding: 10px 0;
 }
+
+/* ИСПРАВЛЕНИЕ: убран border: 1px solid transparent — давал квадратные рамки на мобилке */
 .tab-btn {
-    padding: 8px 18px; border-radius: 50px;
-    /* ИСПРАВЛЕНИЕ: убрали border: 1px solid transparent — он давал квадратный вид на мобилке */
-    border: none;
+    padding: 8px 18px; border-radius: 50px; border: none;
     background: transparent; color: var(--text2);
     font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
     cursor: pointer; white-space: nowrap;
@@ -113,8 +109,13 @@ body {
 .tab-btn:hover { background: var(--card2); color: var(--text); }
 .tab-btn.active {
     background: linear-gradient(135deg, var(--accent), var(--accent2));
-    color: white; border-color: transparent;
+    color: white;
     box-shadow: 0 4px 12px rgba(124,106,255,0.35);
+}
+
+@media(max-width: 600px) {
+    .tab-btn { padding: 7px 12px; font-size: 12px; }
+    .tabs-bar { gap: 2px; }
 }
 
 /* ── Main ── */
@@ -162,7 +163,7 @@ body {
 .btn-add:active { transform: scale(0.97); }
 
 .btn-delete-class {
-    margin-top: 12px; padding: 8px 16px; border-radius: 10px; border: none;
+    margin-top: 12px; padding: 8px 16px; border-radius: 10px;
     background: rgba(239,68,68,0.15); color: var(--red);
     font-size: 13px; font-weight: 500; cursor: pointer;
     border: 1px solid rgba(239,68,68,0.25); transition: all 0.2s; width: 100%;
@@ -221,9 +222,7 @@ body {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 14px; flex-wrap: wrap; gap: 10px;
 }
-.card-name {
-    font-family: 'Unbounded', cursive; font-size: 15px; font-weight: 700;
-}
+.card-name { font-family: 'Unbounded', cursive; font-size: 15px; font-weight: 700; }
 .card-class {
     font-size: 12px; color: var(--text2);
     background: rgba(255,255,255,0.06); padding: 4px 10px;
@@ -239,7 +238,7 @@ body {
 /* ── Toggle Button ── */
 .toggle-btn {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 8px 16px; border-radius: 50px; border: none;
+    padding: 8px 16px; border-radius: 50px;
     background: rgba(124,106,255,0.12); color: var(--accent);
     font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
     cursor: pointer; transition: all 0.2s; margin-top: 10px;
@@ -269,8 +268,7 @@ body {
 .score-controls { display: flex; align-items: center; gap: 8px; }
 .score-val {
     font-family: 'Unbounded', cursive; font-size: 14px; font-weight: 700;
-    min-width: 36px; text-align: center;
-    color: var(--text);
+    min-width: 36px; text-align: center; color: var(--text);
 }
 .score-val.neg { color: var(--red); }
 .score-val.pos { color: var(--green); }
@@ -288,7 +286,7 @@ body {
 
 /* ── Delete Button ── */
 .btn-delete {
-    margin-top: 14px; padding: 8px 16px; border-radius: 10px; border: none;
+    margin-top: 14px; padding: 8px 16px; border-radius: 10px;
     background: rgba(239,68,68,0.1); color: var(--red);
     font-size: 13px; font-weight: 500; cursor: pointer;
     border: 1px solid rgba(239,68,68,0.2); transition: all 0.2s;
@@ -364,7 +362,7 @@ body {
 
 .hidden { display: none !important; }
 
-/* ── Модальное окно входа ── */
+/* ── Modal ── */
 .modal-overlay {
     position: fixed; inset: 0; z-index: 1000;
     background: rgba(0,0,0,0.7);
@@ -428,14 +426,3 @@ body {
 }
 .btn-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,106,255,0.6); }
 .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-
-/* ── Мобильные исправления для tabs ── */
-@media(max-width: 600px) {
-    .tab-btn {
-        padding: 7px 12px;
-        font-size: 12px;
-    }
-    .tabs-bar {
-        gap: 2px;
-    }
-}

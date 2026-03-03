@@ -177,16 +177,19 @@ function deleteClass(cls) {
 
 function addStudent() {
     if (!isAdmin) return;
-    const nameInp = document.getElementById("newStudentName");
-    const classInp = document.getElementById("newStudentClass");
+    const nameInp = document.getElementById("newName");
+    const baseInp = document.getElementById("newBaseScore");
+    const classInp = document.getElementById("newClass");
     const name = nameInp.value.trim();
     const cls = classInp.value;
+    const baseScore = parseInt(baseInp.value) || 0;
     if (!name) return alert("Оқушы атын жазыңыз!");
     if (!cls) return alert("Сынып таңдаңыз!");
     const id = nextId;
-    db.ref(`/students/${id}`).set({ id, name, class: cls, baseScore: BASE_SCORE, scores: {} });
+    db.ref(`/students/${id}`).set({ id, name, class: cls, baseScore, scores: {} });
     db.ref("/nextId").set(id + 1);
     nameInp.value = "";
+    baseInp.value = "";
 }
 
 function deleteStudent(id) {
@@ -229,15 +232,36 @@ function classTotal(cls) {
 function renderTabs() {
     const tabs = document.getElementById("tabs");
     if (!tabs) return;
+
+    // ИСПРАВЛЕНИЕ: был класс "tab" — теперь "tab-btn" (совпадает с CSS)
     let html = `
-        <button class="tab ${activeTab==='school'?'active':''}" onclick="setTab('school')">🏫 Мектеп</button>
-        <button class="tab ${activeTab==='top'?'active':''}" onclick="setTab('top')">🏆 Топ</button>
-        <button class="tab ${activeTab==='classes'?'active':''}" onclick="setTab('classes')">📊 Сыныптар</button>
+        <button class="tab-btn ${activeTab==='school'?'active':''}" onclick="setTab('school')">🏫 Мектеп</button>
+        <button class="tab-btn ${activeTab==='top'?'active':''}" onclick="setTab('top')">🏆 Топ</button>
+        <button class="tab-btn ${activeTab==='classes'?'active':''}" onclick="setTab('classes')">📊 Сыныптар</button>
     `;
     classes.forEach(cls => {
-        html += `<button class="tab ${activeTab===cls?'active':''}" onclick="setTab('${cls}')">${cls}</button>`;
+        html += `<button class="tab-btn ${activeTab===cls?'active':''}" onclick="setTab('${cls}')">${cls}</button>`;
     });
+
     tabs.innerHTML = html;
+
+    // Обновляем select со списком классов в форме добавления
+    const sel = document.getElementById("newClass");
+    if (sel) {
+        sel.innerHTML = `<option value="">— Сынып —</option>`;
+        classes.forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`);
+    }
+
+    // Кнопка удаления класса — показываем только если выбран конкретный класс
+    const delBtn = document.getElementById("deleteClassBtn");
+    if (delBtn) {
+        if (classes.includes(activeTab)) {
+            delBtn.classList.remove("hidden");
+            delBtn.textContent = `🗑 "${activeTab}" сыныбын өшіру`;
+        } else {
+            delBtn.classList.add("hidden");
+        }
+    }
 }
 
 function setTab(tab) {
@@ -308,7 +332,7 @@ function renderStudents() {
             </div>
             <button class="toggle-btn" onclick="toggleCriteria(this)">📋 Критерийлер</button>
             <div class="criteria-body" style="display:none">${criteriaHtml}</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">${isAdmin ? `<button class="btn-delete" onclick="deleteStudent(${s.id})">🗑 Өшіру</button><button class="btn-delete" style="color:var(--accent);border-color:rgba(124,106,255,0.3);background:rgba(124,106,255,0.1)" onclick="editBaseScore(${s.id})">✏️ Бастапқы балл</button>` : ''}</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">${isAdmin ? `<button class="btn-delete" onclick="deleteStudent(${s.id})">🗑 Өшіру</button><button class="btn-delete" style="color:var(--accent);border-color:rgba(124,106,255,0.3);background:rgba(124,106,255,0.1)" onclick="editBaseScore(${s.id})">✏️ Бастапқы балл</button>` : ''}</div>
         `;
         container.appendChild(card);
     });
