@@ -427,6 +427,54 @@ body {
 .btn-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,106,255,0.6); }
 .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
+/* ── Үздіктер tabs ── */
+.stars-tabs {
+    display: flex; gap: 8px; margin-bottom: 24px;
+}
+.stars-tab-btn {
+    padding: 8px 20px; border-radius: 50px; border: 1px solid var(--border);
+    background: transparent; color: var(--text2);
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+}
+.stars-tab-btn:hover { background: var(--card2); color: var(--text); }
+.stars-tab-btn.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white; border-color: transparent;
+    box-shadow: 0 4px 12px rgba(124,106,255,0.35);
+}
+
+/* ── Посттар (сурет + мәтін) ── */
+.posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+.post-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+    transition: all 0.3s; animation: fadeUp 0.4s ease both;
+}
+.post-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0,0,0,0.3); border-color: rgba(124,106,255,0.3); }
+.post-card-img {
+    width: 100%; aspect-ratio: 4/3;
+    object-fit: cover; display: block;
+}
+.post-card-img-placeholder {
+    width: 100%; aspect-ratio: 4/3;
+    background: var(--dark3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px;
+}
+.post-card-body { padding: 16px; }
+.post-card-text {
+    font-size: 14px; color: var(--text); line-height: 1.6;
+    white-space: pre-wrap; word-break: break-word;
+}
+.post-card-date {
+    font-size: 11px; color: var(--text2); margin-top: 10px;
+}
+
 /* ── Үздіктер ── */
 .stars-add-form {
     background: var(--card); border: 1px solid var(--border);
@@ -486,18 +534,18 @@ body {
 .star-photo-wrap { margin-bottom: 12px; }
 
 .star-photo {
-    width: 90px; height: 90px; border-radius: 50%;
-    object-fit: cover; margin: 0 auto;
+    width: 120px; height: 150px; border-radius: 12px;
+    object-fit: cover; object-position: top; margin: 0 auto;
     border: 3px solid var(--gold);
     box-shadow: 0 0 20px rgba(255,215,0,0.25);
     display: block;
 }
 
 .star-photo-placeholder {
-    width: 90px; height: 90px; border-radius: 50%;
+    width: 120px; height: 150px; border-radius: 12px;
     background: var(--dark3); border: 3px solid var(--border);
     display: flex; align-items: center; justify-content: center;
-    font-size: 36px; margin: 0 auto;
+    font-size: 40px; margin: 0 auto;
 }
 
 .star-award-badge {
@@ -517,5 +565,6 @@ body {
 
 @media(max-width: 500px) {
     .stars-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .star-photo, .star-photo-placeholder { width: 72px; height: 72px; }
+    .star-photo, .star-photo-placeholder { width: 100px; height: 130px; }
+    .posts-grid { grid-template-columns: 1fr; }
 }
