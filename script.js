@@ -563,7 +563,6 @@ function renderPostsTab(container, tabsHtml) {
                     ${date ? `<div class="post-card-date"><span style="display:inline-block;margin-right:4px">📅</span>${date}</div>` : ''}
                     ${isAdmin ? `<button class="btn-delete" style="margin-top:10px;width:100%;font-size:12px" onclick="deleteStarPost('${p.id}')">🗑 Өшіру</button>` : ''}
                 </div>
-                </div>
             </div>`;
         });
         postsHtml += `</div>`;
