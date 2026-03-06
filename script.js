@@ -674,7 +674,18 @@ function renderStudentsTab(container, tabsHtml) {
                     </div>
                     <div class="star-award-badge">${s.award || ''}</div>
                     <div class="star-name">${s.name}</div>
-                    ${isAdmin ? `<button class="btn-delete" style="margin-top:10px;width:100%;font-size:12px" onclick="deleteStarStudent('${s.id}')">🗑 Өшіру</button>` : ''}
+                    ${isAdmin ? `
+                        ${!s.photo ? `
+                        <label style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;padding:7px;border-radius:10px;background:rgba(124,106,255,0.12);color:var(--accent);border:1px dashed rgba(124,106,255,0.4);cursor:pointer;font-size:12px;font-weight:600;">
+                            📷 Фото қос
+                            <input type="file" accept="image/*" style="display:none" onchange="uploadStarPhoto(this,'${s.id}')">
+                        </label>` : `
+                        <label style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;padding:7px;border-radius:10px;background:rgba(124,106,255,0.08);color:var(--text2);border:1px dashed var(--border);cursor:pointer;font-size:12px;">
+                            🔄 Ауыстыру
+                            <input type="file" accept="image/*" style="display:none" onchange="uploadStarPhoto(this,'${s.id}')">
+                        </label>`}
+                        <button class="btn-delete" style="margin-top:6px;width:100%;font-size:12px" onclick="deleteStarStudent('${s.id}')">🗑 Өшіру</button>
+                    ` : ''}
                 </div>`;
             });
             cardsHtml += `</div>`;
@@ -790,4 +801,19 @@ function deleteStarStudent(id) {
     if (!isAdmin) return;
     if (!confirm("Өшіресіз бе?")) return;
     db.ref(`/starStudents/${id}`).remove();
+}
+
+async function uploadStarPhoto(input, id) {
+    const file = input.files[0];
+    if (!file) return;
+    const label = input.closest('label');
+    const origText = label.childNodes[0].textContent;
+    label.childNodes[0].textContent = '⏳ Жүктелуде...';
+    try {
+        const url = await uploadToCloudinary(file);
+        await db.ref(`/starStudents/${id}/photo`).set(url);
+    } catch(e) {
+        alert('Қате: ' + e.message);
+        label.childNodes[0].textContent = origText;
+    }
 }
