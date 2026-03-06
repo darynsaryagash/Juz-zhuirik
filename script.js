@@ -7,6 +7,24 @@ const firebaseConfig = {
   messagingSenderId: "985309043409",
   appId: "1:985309043409:web:5236aa1ae8a71a92dec3f0"
 };
+
+// ── Cloudinary конфигурациясы ──
+const CLOUDINARY_CLOUD = 'dhfilz9qo';
+const CLOUDINARY_PRESET = 'juz_zhuirik';
+
+async function uploadToCloudinary(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_PRESET);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
+        method: 'POST',
+        body: formData
+    });
+    const data = await res.json();
+    if (!data.secure_url) throw new Error('Сурет жүктелмеді');
+    return data.secure_url;
+}
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
@@ -714,11 +732,11 @@ async function addStarPost() {
 
     let photo = "";
     if (photoInput.files[0]) {
-        photo = await new Promise(res => {
-            const r = new FileReader();
-            r.onload = e => res(e.target.result);
-            r.readAsDataURL(photoInput.files[0]);
-        });
+        try {
+            photo = await uploadToCloudinary(photoInput.files[0]);
+        } catch(e) {
+            return alert('Сурет жүктелмеді: ' + e.message);
+        }
     }
 
     const dateVal = document.getElementById("postDate").value;
@@ -751,11 +769,11 @@ async function addStarStudent() {
 
     let photo = "";
     if (photoInput.files[0]) {
-        photo = await new Promise(res => {
-            const r = new FileReader();
-            r.onload = e => res(e.target.result);
-            r.readAsDataURL(photoInput.files[0]);
-        });
+        try {
+            photo = await uploadToCloudinary(photoInput.files[0]);
+        } catch(e) {
+            return alert('Сурет жүктелмеді: ' + e.message);
+        }
     }
 
     await db.ref("/starStudents").push().set({ name, year, month, award, photo });
