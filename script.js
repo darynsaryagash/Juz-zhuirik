@@ -43,10 +43,12 @@ connectedRef.on('value', snap => {
 });
 
 presenceRef.on('value', snap => {
-    const count = snap.numChildren();
+    onlineCount = snap.numChildren();
     const el = document.getElementById('onlineCount');
-    if (el) el.textContent = count;
+    if (el) el.textContent = onlineCount;
 });
+
+let onlineCount = 0;
 
 const SECTIONS = [
     { title: "І бөлім: Білім сапасы (әр тоқсан + жылдық)", criteria: [
@@ -319,7 +321,7 @@ function renderStudents() {
 
     if (activeTab === "school") {
         const titleEl = document.getElementById("sectionTitle");
-        titleEl.innerHTML = `📊 Мектеп рейтингі <span style="font-size:14px;font-weight:500;margin-left:12px;vertical-align:middle;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e;margin-right:5px;animation:pulse 1.5s infinite;vertical-align:middle"></span><span id="onlineCount">0</span> онлайн</span>`;
+        titleEl.innerHTML = `📊 Мектеп рейтингі <span style="font-size:14px;font-weight:500;margin-left:12px;vertical-align:middle;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e;margin-right:5px;animation:pulse 1.5s infinite;vertical-align:middle"></span><span id="onlineCount">${onlineCount}</span> онлайн</span>`;
     }
 
     if (filtered.length === 0) {
