@@ -29,6 +29,25 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 
+// ── Онлайн қатысушылар саны ──
+const presenceRef = db.ref('/presence');
+const connectedRef = db.ref('.info/connected');
+let myPresenceRef = null;
+
+connectedRef.on('value', snap => {
+    if (snap.val() === true) {
+        myPresenceRef = presenceRef.push();
+        myPresenceRef.onDisconnect().remove();
+        myPresenceRef.set(true);
+    }
+});
+
+presenceRef.on('value', snap => {
+    const count = snap.numChildren();
+    const el = document.getElementById('onlineCount');
+    if (el) el.textContent = count;
+});
+
 const SECTIONS = [
     { title: "І бөлім: Білім сапасы (әр тоқсан + жылдық)", criteria: [
         { key: "Білім: Үздік", score: 10 },
@@ -297,6 +316,11 @@ function renderStudents() {
 
     document.getElementById("sectionTitle").textContent =
         activeTab === "school" ? "📊 Мектеп рейтингі" : `📊 ${activeTab} сынып рейтингі`;
+
+    if (activeTab === "school") {
+        const titleEl = document.getElementById("sectionTitle");
+        titleEl.innerHTML = `📊 Мектеп рейтингі <span style="font-size:14px;font-weight:500;margin-left:12px;vertical-align:middle;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e;margin-right:5px;animation:pulse 1.5s infinite;vertical-align:middle"></span><span id="onlineCount">0</span> онлайн</span>`;
+    }
 
     if (filtered.length === 0) {
         container.innerHTML = `<div class="no-results">Оқушылар табылмады 🔍</div>`;
