@@ -38,12 +38,37 @@ connectedRef.on('value', snap => {
     if (snap.val() === true) {
         myPresenceRef = presenceRef.push();
         myPresenceRef.onDisconnect().remove();
-        myPresenceRef.set(true);
+        myPresenceRef.set({ ts: Date.now() });
+
+        // Жүректің соғуы — әр 1 сағат сайын уақытты жаңарту
+        setInterval(() => {
+            if (myPresenceRef) myPresenceRef.set({ ts: Date.now() });
+        }, 3600000);
     }
 });
 
+// 2 сағаттан ескі жазбаларды өшіру
+setInterval(() => {
+    presenceRef.get().then(snap => {
+        if (!snap.exists()) return;
+        const now = Date.now();
+        snap.forEach(child => {
+            const data = child.val();
+            if (data && data.ts && (now - data.ts) > 7200000) {
+                child.ref.remove();
+            }
+        });
+    });
+}, 3600000);
+
 presenceRef.on('value', snap => {
-    onlineCount = snap.numChildren();
+    const now = Date.now();
+    let count = 0;
+    snap.forEach(child => {
+        const data = child.val();
+        if (data && data.ts && (now - data.ts) < 7200000) count++;
+    });
+    onlineCount = count;
     const el = document.getElementById('onlineCount');
     if (el) el.textContent = onlineCount;
 });
