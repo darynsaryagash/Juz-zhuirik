@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
+    <div class="glitch-overlay" id="glitchOverlay"></div>
     <div class="bg-orbs">
         <div class="orb orb1"></div>
         <div class="orb orb2"></div>
@@ -27,6 +28,7 @@
                 </div>
             </div>
             <div class="header-btns">
+                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Дизайн ауыстыру"><span class="icon-purple">🌌</span><span class="icon-blue">⚡</span></button>
                 <button class="btn-login" id="loginBtn" onclick="adminLogin()">
                     <span>🔐</span> Кіру
                 </button>

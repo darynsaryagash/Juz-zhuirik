@@ -1,3 +1,26 @@
+
+// ── Дизайн ауыстыру (глитч анимациямен) ──
+let currentTheme = localStorage.getItem('theme') || 'purple';
+if (currentTheme === 'blue') document.documentElement.classList.add('theme-blue');
+
+function toggleTheme() {
+    const overlay = document.getElementById('glitchOverlay');
+    overlay.classList.add('active');
+    setTimeout(() => {
+        if (currentTheme === 'purple') {
+            currentTheme = 'blue';
+            document.documentElement.classList.add('theme-blue');
+        } else {
+            currentTheme = 'purple';
+            document.documentElement.classList.remove('theme-blue');
+        }
+        localStorage.setItem('theme', currentTheme);
+    }, 300);
+    setTimeout(() => {
+        overlay.classList.remove('active');
+    }, 650);
+}
+
 const firebaseConfig = {
   apiKey: "AIzaSyDjgsWQSosY9WxM3Fgmp0Ay-mLQKQc-s-I",
   authDomain: "juz-zhuirik.firebaseapp.com",
@@ -196,7 +219,7 @@ db.ref("/classes").on("value", snap => {
     classes = snap.val() || [];
 });
 
-db.ref("/nextId").on("value", snap => {
+db.ref("/nextId").once("value", snap => {
     nextId = snap.val() || 1;
 });
 
@@ -279,8 +302,7 @@ function updateScore(id, key, increment) {
     const delta = CRITERIA[key] || 0;
     const newVal = increment ? current + delta : current - delta;
     updatingScore = true;
-    db.ref(`/students/${id}/scores/${key}`).set(newVal);
-    db.ref(`/students/${id}/lastUpdated`).set(Date.now());
+    db.ref(`/students/${id}`).update({ [`scores/${key}`]: newVal, lastUpdated: Date.now() });
 }
 function updateScoresInDOM() {
     students.forEach(s => {
@@ -341,7 +363,7 @@ function setTab(tab) { activeTab = tab; renderTabs(); renderStudents(); }
 function renderStudents() {
     if (activeTab === "top") { renderTopPage(); return; }
     if (activeTab === "classes") { renderClassRating(); return; }
-    if (activeTab === "stars") { renderStarsPage(); return; }
+    if (activeTab === "stars") { loadStarPosts(); loadStarStudents(); renderStarsPage(); return; }
 
     const container = document.getElementById("studentList");
     const top3box = document.getElementById("top3");
@@ -552,12 +574,17 @@ let starStudents = [];
 let starsSelectedMonth = KK_MONTHS[0];
 let starsSubTab = "posts"; // "posts" немесе "students"
 
-// Посттар (сурет + мәтін)
+// Посттар — lazy load
 let starPosts = [];
-db.ref("/starPosts").on("value", snap => {
-    starPosts = snap.val() ? Object.entries(snap.val()).map(([id, v]) => ({ id, ...v })) : [];
-    if (activeTab === "stars") renderStarsPage();
-});
+let starPostsLoaded = false;
+function loadStarPosts() {
+    if (starPostsLoaded) return;
+    starPostsLoaded = true;
+    db.ref("/starPosts").on("value", snap => {
+        starPosts = snap.val() ? Object.entries(snap.val()).map(([id, v]) => ({ id, ...v })) : [];
+        if (activeTab === "stars") renderStarsPage();
+    });
+}
 
 // 🔒 Қатырылған мәндер
 let lockedMonth = null;
@@ -583,10 +610,15 @@ function toggleLock(field) {
     renderStarsPage();
 }
 
-db.ref("/starStudents").on("value", snap => {
-    starStudents = snap.val() ? Object.entries(snap.val()).map(([id, v]) => ({ id, ...v })) : [];
-    if (activeTab === "stars") renderStarsPage();
-});
+let starStudentsLoaded = false;
+function loadStarStudents() {
+    if (starStudentsLoaded) return;
+    starStudentsLoaded = true;
+    db.ref("/starStudents").on("value", snap => {
+        starStudents = snap.val() ? Object.entries(snap.val()).map(([id, v]) => ({ id, ...v })) : [];
+        if (activeTab === "stars") renderStarsPage();
+    });
+}
 
 function renderStarsPage() {
     document.getElementById("top3").innerHTML = "";
