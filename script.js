@@ -177,17 +177,27 @@ auth.onAuthStateChanged(user => {
     renderTabs(); renderStudents();
 });
 
-db.ref("/").on("value", snap => {
+// Деректерді бөлек тыңдау — presence өзгерсе қайта рендер болмайды
+let dataLoaded = false;
+
+db.ref("/students").on("value", snap => {
     const d = snap.val() || {};
-    students = d.students ? Object.values(d.students) : [];
-    classes = d.classes || [];
-    nextId = d.nextId || 1;
+    students = Object.values(d);
     if (updatingScore) {
         updatingScore = false;
         updateScoresInDOM();
     } else {
-        renderTabs(); renderStudents();
+        if (dataLoaded) { renderTabs(); renderStudents(); }
     }
+    if (!dataLoaded) { dataLoaded = true; renderTabs(); renderStudents(); }
+});
+
+db.ref("/classes").on("value", snap => {
+    classes = snap.val() || [];
+});
+
+db.ref("/nextId").on("value", snap => {
+    nextId = snap.val() || 1;
 });
 
 function adminLogin() {
@@ -270,6 +280,7 @@ function updateScore(id, key, increment) {
     const newVal = increment ? current + delta : current - delta;
     updatingScore = true;
     db.ref(`/students/${id}/scores/${key}`).set(newVal);
+    db.ref(`/students/${id}/lastUpdated`).set(Date.now());
 }
 function updateScoresInDOM() {
     students.forEach(s => {
@@ -402,11 +413,20 @@ function renderStudents() {
             });
         });
 
+        const lastUpdated = s.lastUpdated ? (() => {
+            const d = new Date(s.lastUpdated);
+            const now = new Date();
+            const isToday = d.toDateString() === now.toDateString();
+            const time = d.toLocaleTimeString('kk-KZ', { hour: '2-digit', minute: '2-digit' });
+            const date = d.toLocaleDateString('kk-KZ', { day: 'numeric', month: 'long' });
+            return isToday ? `Бүгін ${time}` : `${date} ${time}`;
+        })() : null;
+
         card.innerHTML = `
             <div class="card-header">
                 <div style="display:flex;align-items:center;gap:14px">
                     <span style="font-family:'Unbounded',cursive;font-size:22px;font-weight:800;min-width:40px;${placeStyle}">${place}.</span>
-                    <div><span class="card-name">${s.name}</span><span class="card-class">${s.class}</span></div>
+                    <div><span class="card-name">${s.name}</span><span class="card-class">${s.class}</span>${lastUpdated ? `<span style="font-size:11px;color:var(--text2);display:block;margin-top:2px">🕐 ${lastUpdated}</span>` : ''}</div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px">
                     ${s.baseScore ? `<span style="font-size:12px;color:var(--text2);background:rgba(255,255,255,0.06);padding:4px 10px;border-radius:20px;">🎯 Бастапқы: ${s.baseScore}</span>` : ''}
@@ -415,7 +435,7 @@ function renderStudents() {
             </div>
             <button class="toggle-btn" onclick="toggleCriteria(this)">📋 Критерийлер</button>
             <div class="criteria-body" style="display:none">${criteriaHtml}</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">${isAdmin ? `<button class="btn-delete" onclick="deleteStudent(${s.id})">🗑 Өшіру</button><button class="btn-delete" style="color:var(--accent);border-color:rgba(124,106,255,0.3);background:rgba(124,106,255,0.1)" onclick="editBaseScore(${s.id})">✏️ Бастапқы балл</button>` : ''}</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">${isAdmin ? `<button class="btn-delete" onclick="deleteStudent(${s.id})">🗑 Өшіру</button><button class="btn-delete" style="color:var(--blue3);border-color:rgba(37,99,235,0.3);background:rgba(37,99,235,0.1)" onclick="editBaseScore(${s.id})">✏️ Бастапқы балл</button>` : ''}</div>
         `;
         container.appendChild(card);
     });
@@ -599,7 +619,7 @@ function renderPostsTab(container, tabsHtml) {
                     <span>🖼 Сурет таңдау</span>
                     <input type="file" id="postPhoto" accept="image/*" onchange="previewPostPhoto(this)" style="display:none">
                 </label>
-                <img id="postPhotoPreview" style="display:none;width:100%;max-height:200px;object-fit:cover;border-radius:12px;margin:4px 0;border:2px solid var(--accent)">
+                <img id="postPhotoPreview" style="display:none;width:100%;max-height:200px;object-fit:cover;border-radius:12px;margin:4px 0;border:2px solid var(--blue)">
                 <textarea id="postText" placeholder="Мәтін жазыңыз..." class="inp" style="min-height:80px;resize:vertical;font-family:'Inter',sans-serif"></textarea>
                 <div style="display:flex;gap:8px;align-items:center">
                     <input type="date" id="postDate" class="inp" style="flex:1" value="${new Date().toISOString().split('T')[0]}">
@@ -653,7 +673,7 @@ function renderStudentsTab(container, tabsHtml) {
 
         const lockStyle = (locked) =>
             `padding:9px 13px;border-radius:10px;border:none;cursor:pointer;font-size:15px;flex-shrink:0;` +
-            `background:${locked ? 'var(--accent)' : 'rgba(255,255,255,0.08)'};` +
+            `background:${locked ? 'var(--blue3)' : 'rgba(255,255,255,0.08)'};` +
             `color:${locked ? 'white' : 'var(--text2)'};transition:all 0.2s;`;
 
         adminHtml = `
@@ -684,7 +704,7 @@ function renderStudentsTab(container, tabsHtml) {
                 <input type="text" id="starAwardCustom" placeholder="Марапат атауы..." class="inp" style="display:none">
 
                 ${lockedMonth || lockedYear || lockedAward ? `
-                <div style="font-size:12px;color:var(--accent);background:rgba(124,106,255,0.1);border:1px solid rgba(124,106,255,0.2);border-radius:10px;padding:8px 12px;">
+                <div style="font-size:12px;color:var(--blue3);background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.2);border-radius:10px;padding:8px 12px;">
                     🔒 Қатырылған: ${[lockedMonth, lockedYear, lockedAward].filter(Boolean).join(' · ')}
                 </div>` : ''}
 
@@ -692,7 +712,7 @@ function renderStudentsTab(container, tabsHtml) {
                     <span>📷 Фото таңдау</span>
                     <input type="file" id="starPhoto" accept="image/*" onchange="previewStarPhoto(this)" style="display:none">
                 </label>
-                <img id="starPhotoPreview" style="display:none;width:100px;height:100px;object-fit:cover;border-radius:50%;margin:8px auto;border:3px solid var(--gold)">
+                <img id="starPhotoPreview" style="display:none;width:100px;height:100px;object-fit:cover;border-radius:10px;margin:8px auto;border:2px solid var(--blue3)">
                 <button class="btn-add" onclick="addStarStudent()">➕ Қосу</button>
             </div>
         </div>`;
@@ -727,11 +747,11 @@ function renderStudentsTab(container, tabsHtml) {
                     <div class="star-name">${s.name}</div>
                     ${isAdmin ? `
                         ${!s.photo ? `
-                        <label style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;padding:7px;border-radius:10px;background:rgba(124,106,255,0.12);color:var(--accent);border:1px dashed rgba(124,106,255,0.4);cursor:pointer;font-size:12px;font-weight:600;">
+                        <label style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;padding:7px;border-radius:8px;background:rgba(37,99,235,0.12);color:var(--blue3);border:1px dashed rgba(37,99,235,0.4);cursor:pointer;font-size:12px;font-weight:600;">
                             📷 Фото қос
                             <input type="file" accept="image/*" style="display:none" onchange="uploadStarPhoto(this,'${s.id}')">
                         </label>` : `
-                        <label style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;padding:7px;border-radius:10px;background:rgba(124,106,255,0.08);color:var(--text2);border:1px dashed var(--border);cursor:pointer;font-size:12px;">
+                        <label style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;padding:7px;border-radius:10px;background:rgba(37,99,235,0.08);color:var(--text2);border:1px dashed var(--border);cursor:pointer;font-size:12px;">
                             🔄 Ауыстыру
                             <input type="file" accept="image/*" style="display:none" onchange="uploadStarPhoto(this,'${s.id}')">
                         </label>`}
