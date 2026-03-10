@@ -206,21 +206,19 @@ auth.onAuthStateChanged(user => {
 // Деректерді бөлек тыңдау — presence өзгерсе қайта рендер болмайды
 let dataLoaded = false;
 
-db.ref("/students").on("value", snap => {
-    const d = snap.val() || {};
-    students = Object.values(d);
-    if (updatingScore) {
-        updatingScore = false;
-        updateScoresInDOM();
-    } else {
-        if (dataLoaded) { renderTabs(); renderStudents(); }
-    }
-    if (!dataLoaded) { dataLoaded = true; renderTabs(); renderStudents(); }
-});
-
-db.ref("/classes").on("value", snap => {
-    classes = snap.val() || [];
-});
+function loadData() {
+    db.ref("/students").once("value", snap => {
+        const d = snap.val() || {};
+        students = Object.values(d);
+        db.ref("/classes").once("value", snap2 => {
+            classes = snap2.val() || [];
+            dataLoaded = true;
+            renderTabs();
+            renderStudents();
+        });
+    });
+}
+loadData();
 
 db.ref("/nextId").once("value", snap => {
     nextId = snap.val() || 1;
@@ -259,13 +257,17 @@ function addClass() {
     const name = inp.value.trim().toUpperCase();
     if (!name) return alert("Сынып атын жазыңыз!");
     if (classes.includes(name)) return alert("Бұл сынып бар!");
-    db.ref("/classes").set([...classes, name]);
+    classes = [...classes, name];
+    db.ref("/classes").set(classes);
+    renderTabs(); renderStudents();
     inp.value = "";
 }
 function deleteClass(cls) {
     if (!isAdmin) return;
     if (!confirm(`"${cls}" сыныбын өшіресіз бе?`)) return;
-    db.ref("/classes").set(classes.filter(c => c !== cls));
+    classes = classes.filter(c => c !== cls);
+    db.ref("/classes").set(classes);
+    renderTabs(); renderStudents();
 }
 function addStudent() {
     if (!isAdmin) return;
@@ -278,14 +280,20 @@ function addStudent() {
     if (!name) return alert("Оқушы атын жазыңыз!");
     if (!cls) return alert("Сынып таңдаңыз!");
     const id = nextId;
-    db.ref(`/students/${id}`).set({ id, name, class: cls, baseScore, scores: {} });
-    db.ref("/nextId").set(id + 1);
+    const newStudent = { id, name, class: cls, baseScore, scores: {} };
+    students.push(newStudent);
+    nextId = id + 1;
+    db.ref(`/students/${id}`).set(newStudent);
+    db.ref("/nextId").set(nextId);
+    renderTabs(); renderStudents();
     nameInp.value = ""; baseInp.value = "";
 }
 function deleteStudent(id) {
     if (!isAdmin) return;
     if (!confirm("Оқушыны өшіресіз бе?")) return;
+    students = students.filter(s => s.id !== id);
     db.ref(`/students/${id}`).remove();
+    renderTabs(); renderStudents();
 }
 function editBaseScore(id) {
     if (!isAdmin) return;
@@ -304,7 +312,14 @@ function updateScore(id, key, increment) {
     const current = s.scores?.[key] || 0;
     const delta = CRITERIA[key] || 0;
     const newVal = increment ? current + delta : current - delta;
-    updatingScore = true;
+    // Локальды жаңарту — Firebase-ке қайта сұраныс жоқ
+    const student = students.find(s => s.id === id);
+    if (student) {
+        if (!student.scores) student.scores = {};
+        student.scores[key] = newVal;
+        student.lastUpdated = Date.now();
+        updateScoresInDOM();
+    }
     db.ref(`/students/${id}`).update({ [`scores/${key}`]: newVal, lastUpdated: Date.now() });
 }
 function updateScoresInDOM() {
@@ -583,7 +598,7 @@ let starPostsLoaded = false;
 function loadStarPosts() {
     if (starPostsLoaded) return;
     starPostsLoaded = true;
-    db.ref("/starPosts").on("value", snap => {
+    db.ref("/starPosts").once("value", snap => {
         starPosts = snap.val() ? Object.entries(snap.val()).map(([id, v]) => ({ id, ...v })) : [];
         if (activeTab === "stars") renderStarsPage();
     });
@@ -617,7 +632,7 @@ let starStudentsLoaded = false;
 function loadStarStudents() {
     if (starStudentsLoaded) return;
     starStudentsLoaded = true;
-    db.ref("/starStudents").on("value", snap => {
+    db.ref("/starStudents").once("value", snap => {
         starStudents = snap.val() ? Object.entries(snap.val()).map(([id, v]) => ({ id, ...v })) : [];
         if (activeTab === "stars") renderStarsPage();
     });
