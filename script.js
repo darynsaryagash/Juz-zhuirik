@@ -5,6 +5,7 @@ if (currentTheme === 'blue') document.documentElement.classList.add('theme-blue'
 
 function toggleTheme() {
     const overlay = document.getElementById('glitchOverlay');
+    if (!overlay) return;
     overlay.classList.add('active');
     setTimeout(() => {
         if (currentTheme === 'purple') {
@@ -15,6 +16,8 @@ function toggleTheme() {
             document.documentElement.classList.remove('theme-blue');
         }
         localStorage.setItem('theme', currentTheme);
+        renderTabs();
+        renderStudents();
     }, 300);
     setTimeout(() => {
         overlay.classList.remove('active');
