@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Mono:wght@400;700&family=Unbounded:wght@400;600;800&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -33,8 +33,8 @@
     --radius:   16px;
     --radius2:  10px;
     --radius3:  6px;
-    --font-main: 'Inter', sans-serif;
-    --font-title: 'Unbounded', cursive;
+    --font-main: 'Nunito', sans-serif;
+    --font-title: 'Nunito', sans-serif;
     --font-mono: 'Space Mono', monospace;
     --tab-radius: 50px;
     --btn-radius: 50px;
