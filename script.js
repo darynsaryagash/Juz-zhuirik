@@ -147,6 +147,7 @@ const SECTIONS = [
         { key: "Ата-ана: Белсенділік танытып іс-шараларға қатысса", score: 10 },
         { key: "Ата-ана: Жиналысқа үздіксіз қатысып отырса", score: 5 },
         { key: "Ата-ана: Жиналысқа қатыспаса", score: -5 },
+        { key: "Онлайн сайыстарға қатысса", score: 5 },
     ]},
     { title: "VІІІ бөлім: Түрлі конкурстардан жүлдегер атанса (әр қатысқаны үшін)", criteria: [
         { key: "Конкурс: Халықаралық 1-орын", score: 15 },
@@ -233,6 +234,74 @@ function closeLoginModal() {
     document.getElementById("loginEmail").value = "";
     document.getElementById("loginPassword").value = "";
     document.getElementById("loginError").textContent = "";
+}
+
+function openNewsModal() {
+    document.getElementById("newsModal").classList.remove("hidden");
+    loadNews();
+}
+function closeNewsModal() {
+    document.getElementById("newsModal").classList.add("hidden");
+}
+
+// ── Жаңалықтар жүйесі (Firebase) ──
+const newsRef = db.ref('/news');
+
+function renderNewsList(items) {
+    const container = document.getElementById("newsChangelogList");
+    if (!container) return;
+    if (!items || items.length === 0) {
+        container.innerHTML = `<div class="news-loading">Жаңалықтар жоқ</div>`;
+        return;
+    }
+    container.innerHTML = items.map((item, idx) => {
+        const lines = item.text.split('\n').filter(l => l.trim());
+        const isLatest = idx === 0;
+        return `
+        <div class="news-version" data-id="${item.id}">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                <div class="news-version-badge">${item.version}${isLatest ? ' — Соңғы' : ''}</div>
+                <span style="font-size:11px;color:var(--text2);opacity:0.6">${item.date || ''}</span>
+                ${isAdmin ? `<button onclick="deleteNews('${item.id}')" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#ef4444;border-radius:8px;padding:3px 10px;font-size:11px;cursor:pointer;flex-shrink:0">Өшіру</button>` : ''}
+            </div>
+            <ul class="news-list" style="margin-top:8px">
+                ${lines.map(l => `<li>${l}</li>`).join('')}
+            </ul>
+        </div>`;
+    }).join('');
+}
+
+function loadNews() {
+    const container = document.getElementById("newsChangelogList");
+    if (container) container.innerHTML = `<div class="news-loading">Жүктелуде...</div>`;
+    newsRef.orderByChild('ts').once('value', snap => {
+        const items = [];
+        snap.forEach(child => {
+            items.unshift({ id: child.key, ...child.val() });
+        });
+        renderNewsList(items);
+    });
+}
+
+function addNews() {
+    if (!isAdmin) return;
+    const version = document.getElementById("newsVersion").value.trim();
+    const text = document.getElementById("newsText").value.trim();
+    if (!version || !text) { alert("Версия мен мәтінді толтырыңыз!"); return; }
+    const now = new Date();
+    const date = now.toLocaleDateString('kk-KZ', { year: 'numeric', month: 'long', day: 'numeric' });
+    newsRef.push({ version, text, date, ts: Date.now() }, err => {
+        if (err) { alert("Қате: " + err.message); return; }
+        document.getElementById("newsVersion").value = "";
+        document.getElementById("newsText").value = "";
+        alert("✅ Жаңалық жарияланды!");
+    });
+}
+
+function deleteNews(id) {
+    if (!isAdmin) return;
+    if (!confirm("Жаңалықты өшіресіз бе?")) return;
+    newsRef.child(id).remove();
 }
 async function submitLogin() {
     const email = document.getElementById("loginEmail").value.trim();
