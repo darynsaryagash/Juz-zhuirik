@@ -274,7 +274,7 @@ function renderNewsList(items) {
 function loadNews() {
     const container = document.getElementById("newsChangelogList");
     if (container) container.innerHTML = `<div class="news-loading">Жүктелуде...</div>`;
-    newsRef.orderByChild('ts').once('value', snap => {
+    newsRef.once('value', snap => {
         const items = [];
         snap.forEach(child => {
             items.unshift({ id: child.key, ...child.val() });
