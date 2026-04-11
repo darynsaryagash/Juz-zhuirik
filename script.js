@@ -280,6 +280,12 @@ function loadNews() {
             items.unshift({ id: child.key, ...child.val() });
         });
         renderNewsList(items);
+    }, err => {
+        const c = document.getElementById("newsChangelogList");
+        if (c) c.innerHTML = `<div class="news-loading" style="color:#ef4444;opacity:1">
+            ⚠️ Жүктеу қатесі: ${err.message}<br><br>
+            <span style="font-size:11px;opacity:0.7">Firebase Console → Realtime Database → Rules ішінде /news жолына read: true қосыңыз</span>
+        </div>`;
     });
 }
 
