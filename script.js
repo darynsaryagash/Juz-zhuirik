@@ -274,19 +274,23 @@ function renderNewsList(items) {
 function loadNews() {
     const container = document.getElementById("newsChangelogList");
     if (container) container.innerHTML = `<div class="news-loading">Жүктелуде...</div>`;
-    newsRef.once('value', snap => {
-        const items = [];
-        snap.forEach(child => {
-            items.unshift({ id: child.key, ...child.val() });
+    try {
+        newsRef.once('value').then(snap => {
+            const items = [];
+            snap.forEach(child => {
+                items.unshift({ id: child.key, ...child.val() });
+            });
+            renderNewsList(items);
+        }).catch(err => {
+            const c = document.getElementById("newsChangelogList");
+            if (c) c.innerHTML = `<div class="news-loading" style="color:#ef4444;opacity:1;line-height:1.8">
+                ⚠️ Қате: <b>${err.code || err.message}</b>
+            </div>`;
         });
-        renderNewsList(items);
-    }, err => {
+    } catch(e) {
         const c = document.getElementById("newsChangelogList");
-        if (c) c.innerHTML = `<div class="news-loading" style="color:#ef4444;opacity:1">
-            ⚠️ Жүктеу қатесі: ${err.message}<br><br>
-            <span style="font-size:11px;opacity:0.7">Firebase Console → Realtime Database → Rules ішінде /news жолына read: true қосыңыз</span>
-        </div>`;
-    });
+        if (c) c.innerHTML = `<div class="news-loading" style="color:#ef4444;opacity:1">⚠️ JS қатесі: ${e.message}</div>`;
+    }
 }
 
 function addNews() {
