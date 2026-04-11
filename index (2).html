@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Жүзден жүйрік</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+    <div class="glitch-overlay" id="glitchOverlay"></div>
+    <div class="bg-orbs">
+        <div class="orb orb1"></div>
+        <div class="orb orb2"></div>
+        <div class="orb orb3"></div>
+    </div>
+
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo">
+                <span class="logo-icon">🏆</span>
+                <div>
+                    <div class="logo-title">Жүзден жүйрік</div>
+                    <div class="logo-sub">Мектеп рейтинг жүйесі</div>
+                </div>
+            </div>
+            <div class="header-btns">
+                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Дизайн ауыстыру"><span class="icon-purple">🎨</span><span class="icon-blue">🎨</span></button>
+                <button class="btn-login" id="loginBtn" onclick="adminLogin()">
+                    <span>🔐</span> Кіру
+                </button>
+                <button class="btn-logout hidden" id="logoutBtn" onclick="adminLogout()">
+                    <span>👋</span> Шығу
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="tabs-wrap">
+        <div class="tabs-bar" id="tabs"></div>
+    </div>
+
+    <main class="main">
+        <div id="adminPanel" class="admin-panel hidden">
+            <div class="admin-grid">
+                <div class="admin-card">
+                    <div class="admin-card-icon">🏫</div>
+                    <h3>Жаңа сынып</h3>
+                    <div class="input-group">
+                        <input type="text" id="newClassName" placeholder="Мысалы: 8А" class="inp">
+                        <button class="btn-add" onclick="addClass()">Қосу</button>
+                    </div>
+                    <button class="btn-delete-class hidden" id="deleteClassBtn" onclick="deleteClass(activeTab)"></button>
+                </div>
+                <div class="admin-card">
+                    <div class="admin-card-icon">👤</div>
+                    <h3>Жаңа оқушы</h3>
+                    <div class="input-group">
+                        <input type="text" id="newName" placeholder="Аты-жөні" class="inp">
+                        <input type="number" id="newBaseScore" placeholder="Бастапқы балл (міндетті емес)" class="inp">
+                        <select id="newClass" class="inp">
+                            <option value="">— Сынып —</option>
+                        </select>
+                        <button class="btn-add" onclick="addStudent()">Қосу</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="search-wrap">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="filterInput" placeholder="Оқушы немесе сынып іздеу..." oninput="renderStudents()" class="search-inp">
+            </div>
+        </div>
+
+        <div class="section-header">
+            <h2 id="sectionTitle">📊 Мектеп рейтингі</h2>
+        </div>
+
+        <div id="studentList" class="student-grid"></div>
+        <div id="top3"></div>
+    </main>
+
+    <div class="made-by">made by Aidos</div>
+
+    <!-- Модальное окно входа -->
+    <div class="modal-overlay hidden" id="loginModal" onclick="if(event.target===this)closeLoginModal()">
+        <div class="modal-box">
+            <div class="modal-icon">🔐</div>
+            <h2 class="modal-title">Кіру</h2>
+            <p class="modal-sub">Әкімші панеліне кіру</p>
+            <div class="modal-field">
+                <label>Email</label>
+                <input type="email" id="loginEmail" placeholder="admin@school.kz" class="inp" onkeydown="if(event.key==='Enter')document.getElementById('loginPassword').focus()">
+            </div>
+            <div class="modal-field">
+                <label>Пароль</label>
+                <input type="password" id="loginPassword" placeholder="••••••••" class="inp" onkeydown="if(event.key==='Enter')submitLogin()">
+            </div>
+            <div class="login-error" id="loginError"></div>
+            <div class="modal-btns">
+                <button class="btn-cancel" onclick="closeLoginModal()">Бас тарту</button>
+                <button class="btn-submit" id="loginSubmitBtn" onclick="submitLogin()">Кіру</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=2"></script>
+</body>
+</html>

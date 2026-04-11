@@ -294,7 +294,7 @@ function loadNews() {
 }
 
 function addNews() {
-    if (!isAdmin) return;
+    if (!isAdmin) { alert("❌ Алдымен кіріңіз! (Кіру батырмасын басыңыз)"); return; }
     const version = document.getElementById("newsVersion").value.trim();
     const text = document.getElementById("newsText").value.trim();
     if (!version || !text) { alert("Версия мен мәтінді толтырыңыз!"); return; }
