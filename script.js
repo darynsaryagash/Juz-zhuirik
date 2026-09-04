@@ -393,6 +393,74 @@ function deleteStudent(id) {
     db.ref(`/students/${id}`).remove();
     renderTabs(); renderStudents();
 }
+async function promoteAllClasses() {
+    if (!isAdmin) return;
+    if (!confirm("⚠️ Барлық сынып бір жылға көтеріледі (мыс. 8А → 9А). 11-сынып оқушылары тізімнен МҮЛДЕМ өшіріледі (бітірген болып саналады). Бұл әрекетті қайтара алмайсыз! Жалғастырасыз ба?")) return;
+    if (!confirm("Соңғы рет сұраймыз: сенімдісіз бе? 11-сынып оқушылары қайтарылмастай өшіріледі.")) return;
+
+    const classRegex = /^(\d+)(.*)$/;
+    const classMap = {}; // ескі сынып -> жаңа сынып (немесе null — бітірді)
+    const newClassesList = [];
+
+    classes.forEach(cls => {
+        const m = cls.match(classRegex);
+        if (!m) {
+            // сан таппаса, өзгеріссіз қалдырамыз
+            classMap[cls] = cls;
+            if (!newClassesList.includes(cls)) newClassesList.push(cls);
+            return;
+        }
+        const num = parseInt(m[1]);
+        const rest = m[2];
+        if (num >= 11) {
+            classMap[cls] = null; // бітіруші сынып
+        } else {
+            const newCls = (num + 1) + rest;
+            classMap[cls] = newCls;
+            if (!newClassesList.includes(newCls)) newClassesList.push(newCls);
+        }
+    });
+
+    const updates = {};
+    let graduatedCount = 0;
+    students.forEach(s => {
+        const mapped = classMap.hasOwnProperty(s.class) ? classMap[s.class] : s.class;
+        if (mapped === null) {
+            updates[`/students/${s.id}`] = null;
+            graduatedCount++;
+        } else if (mapped !== s.class) {
+            updates[`/students/${s.id}/class`] = mapped;
+        }
+    });
+
+    try {
+        await db.ref().update(updates);
+        await db.ref("/classes").set(newClassesList);
+
+        students = students
+            .filter(s => (classMap.hasOwnProperty(s.class) ? classMap[s.class] : s.class) !== null)
+            .map(s => {
+                const mapped = classMap.hasOwnProperty(s.class) ? classMap[s.class] : s.class;
+                return { ...s, class: mapped };
+            });
+        classes = newClassesList;
+
+        try {
+            localStorage.setItem('cache_students', JSON.stringify(students));
+            localStorage.setItem('cache_classes', JSON.stringify(classes));
+        } catch(e) {}
+
+        if (!classes.includes(activeTab) && !["school","top","classes","stars"].includes(activeTab)) {
+            activeTab = "school";
+        }
+
+        renderTabs(); renderStudents();
+        alert(`✅ Барлық сынып бір жылға көтерілді!${graduatedCount ? ` 🎓 ${graduatedCount} бітіруші (11-сынып) тізімнен өшірілді.` : ''}`);
+    } catch(e) {
+        alert("Қате: " + e.message);
+    }
+}
+
 async function resetAllScores() {
     if (!isAdmin) return;
     if (!confirm("⚠️ БАРЛЫҚ оқушылардың балдары (баллдар + бастапқы балл) нөлге түсіріледі. Бұл әрекетті ЕШТЕҢЕмен қайтара алмайсыз! Жалғастырасыз ба?")) return;
