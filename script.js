@@ -208,15 +208,34 @@ auth.onAuthStateChanged(user => {
 let dataLoaded = false;
 
 function loadData() {
-    db.ref("/students").once("value", snap => {
-        const d = snap.val() || {};
-        students = Object.values(d);
-        db.ref("/classes").once("value", snap2 => {
-            classes = snap2.val() || [];
+    // Кэштен лезде көрсету — деректер жүктеліп жатқанда экран бос тұрмайды
+    try {
+        const cs = localStorage.getItem('cache_students');
+        const cc = localStorage.getItem('cache_classes');
+        if (cs && cc) {
+            students = JSON.parse(cs);
+            classes = JSON.parse(cc);
             dataLoaded = true;
             renderTabs();
             renderStudents();
-        });
+        }
+    } catch(e) {}
+
+    // students пен classes-ты ПАРАЛЛЕЛЬ жүктейміз (бұрын кезекпен жүктелетін, 2 есе баяу еді)
+    Promise.all([
+        db.ref("/students").once("value"),
+        db.ref("/classes").once("value")
+    ]).then(([snap, snap2]) => {
+        const d = snap.val() || {};
+        students = Object.values(d);
+        classes = snap2.val() || [];
+        dataLoaded = true;
+        try {
+            localStorage.setItem('cache_students', JSON.stringify(students));
+            localStorage.setItem('cache_classes', JSON.stringify(classes));
+        } catch(e) {}
+        renderTabs();
+        renderStudents();
     });
 }
 loadData();
@@ -373,6 +392,29 @@ function deleteStudent(id) {
     students = students.filter(s => s.id !== id);
     db.ref(`/students/${id}`).remove();
     renderTabs(); renderStudents();
+}
+async function resetAllScores() {
+    if (!isAdmin) return;
+    if (!confirm("⚠️ БАРЛЫҚ оқушылардың балдары (баллдар + бастапқы балл) нөлге түсіріледі. Бұл әрекетті ЕШТЕҢЕмен қайтара алмайсыз! Жалғастырасыз ба?")) return;
+    if (!confirm("Соңғы рет сұраймыз: расымен барлық баллды өшіресіз бе? Фотолар мен «Айдың үздіктері» тізіміне тиіспейді.")) return;
+
+    const updates = {};
+    students.forEach(s => {
+        updates[`/students/${s.id}/scores`] = {};
+        updates[`/students/${s.id}/baseScore`] = 0;
+    });
+
+    try {
+        await db.ref().update(updates);
+        students.forEach(s => { s.scores = {}; s.baseScore = 0; s.lastUpdated = Date.now(); });
+        try {
+            localStorage.setItem('cache_students', JSON.stringify(students));
+        } catch(e) {}
+        renderStudents();
+        alert("✅ Барлық оқушының баллы өшірілді! Фотолар мен үздіктер сақталды.");
+    } catch(e) {
+        alert("Қате: " + e.message);
+    }
 }
 function editBaseScore(id) {
     if (!isAdmin) return;
