@@ -193,6 +193,14 @@ const SECTIONS = [
 const CRITERIA = {};
 SECTIONS.forEach(s => s.criteria.forEach(c => { CRITERIA[c.key] = c.score; }));
 
+// ── Пайдаланушы енгізген мәтінді HTML-ге қауіпсіз кірістіру ──
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+}
+
 let isAdmin = false, students = [], classes = [], nextId = 1, activeTab = "school";
 let updatingScore = false;
 
@@ -228,7 +236,7 @@ function loadData() {
     ]).then(([snap, snap2]) => {
         const d = snap.val() || {};
         students = Object.values(d);
-        classes = snap2.val() || [];
+        classes = (snap2.val() || []).slice().sort(classSortCompare);
         dataLoaded = true;
         try {
             localStorage.setItem('cache_students', JSON.stringify(students));
@@ -279,12 +287,12 @@ function renderNewsList(items) {
         return `
         <div class="news-version" data-id="${item.id}">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-                <div class="news-version-badge">${item.version}${isLatest ? ' — Соңғы' : ''}</div>
-                <span style="font-size:11px;color:var(--text2);opacity:0.6">${item.date || ''}</span>
+                <div class="news-version-badge">${escapeHtml(item.version)}${isLatest ? ' — Соңғы' : ''}</div>
+                <span style="font-size:11px;color:var(--text2);opacity:0.6">${escapeHtml(item.date || '')}</span>
                 ${isAdmin ? `<button onclick="deleteNews('${item.id}')" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#ef4444;border-radius:8px;padding:3px 10px;font-size:11px;cursor:pointer;flex-shrink:0">Өшіру</button>` : ''}
             </div>
             <ul class="news-list" style="margin-top:8px">
-                ${lines.map(l => `<li>${l}</li>`).join('')}
+                ${lines.map(l => `<li>${escapeHtml(l)}</li>`).join('')}
             </ul>
         </div>`;
     }).join('');
@@ -324,13 +332,14 @@ function addNews() {
         document.getElementById("newsVersion").value = "";
         document.getElementById("newsText").value = "";
         alert("✅ Жаңалық жарияланды!");
+        loadNews();
     });
 }
 
 function deleteNews(id) {
     if (!isAdmin) return;
     if (!confirm("Жаңалықты өшіресіз бе?")) return;
-    newsRef.child(id).remove();
+    newsRef.child(id).remove().then(loadNews);
 }
 async function submitLogin() {
     const email = document.getElementById("loginEmail").value.trim();
@@ -349,25 +358,47 @@ async function submitLogin() {
 }
 function adminLogout() { auth.signOut(); }
 
+function classSortCompare(a, b) {
+    const ma = a.match(/^(\d+)/);
+    const mb = b.match(/^(\d+)/);
+    const na = ma ? parseInt(ma[1]) : Infinity;
+    const nb = mb ? parseInt(mb[1]) : Infinity;
+    if (na !== nb) return na - nb;
+    return a.localeCompare(b, 'kk');
+}
 function addClass() {
     if (!isAdmin) return;
     const inp = document.getElementById("newClassName");
     const name = inp.value.trim().toUpperCase();
     if (!name) return alert("Сынып атын жазыңыз!");
+    if (/[<>"'&]/.test(name)) return alert("Сынып атында арнайы таңбалар (<, >, \", ', &) болмауы керек!");
     if (classes.includes(name)) return alert("Бұл сынып бар!");
-    classes = [...classes, name];
+    classes = [...classes, name].sort(classSortCompare);
     db.ref("/classes").set(classes);
     renderTabs(); renderStudents();
     inp.value = "";
 }
 function deleteClass(cls) {
     if (!isAdmin) return;
-    if (!confirm(`"${cls}" сыныбын өшіресіз бе?`)) return;
-    classes = classes.filter(c => c !== cls);
-    db.ref("/classes").set(classes);
-    renderTabs(); renderStudents();
+    const studentsInClass = students.filter(s => s.class === cls);
+    if (studentsInClass.length > 0) {
+        if (!confirm(`⚠️ "${cls}" сыныбында ${studentsInClass.length} оқушы бар!\n\nСыныпты өшірсеңіз, осы оқушылардың БАРЛЫҒЫ да толығымен өшіріледі. Жалғастырасыз ба?`)) return;
+        if (!confirm(`Соңғы рет сұраймыз: "${cls}" сыныбын және ондағы ${studentsInClass.length} оқушыны өшіресіз бе? Бұл әрекетті қайтара алмайсыз!`)) return;
+    } else {
+        if (!confirm(`"${cls}" сыныбын өшіресіз бе?`)) return;
+    }
+
+    const updates = { [`/classes`]: classes.filter(c => c !== cls) };
+    studentsInClass.forEach(s => { updates[`/students/${s.id}`] = null; });
+
+    db.ref().update(updates).then(() => {
+        classes = classes.filter(c => c !== cls);
+        students = students.filter(s => s.class !== cls);
+        if (activeTab === cls) activeTab = "school";
+        renderTabs(); renderStudents();
+    }).catch(e => alert("Қате: " + e.message));
 }
-function addStudent() {
+async function addStudent() {
     if (!isAdmin) return;
     const nameInp = document.getElementById("newName");
     const baseInp = document.getElementById("newBaseScore");
@@ -377,14 +408,21 @@ function addStudent() {
     const baseScore = parseInt(baseInp.value) || 0;
     if (!name) return alert("Оқушы атын жазыңыз!");
     if (!cls) return alert("Сынып таңдаңыз!");
-    const id = nextId;
-    const newStudent = { id, name, class: cls, baseScore, scores: {} };
-    students.push(newStudent);
-    nextId = id + 1;
-    db.ref(`/students/${id}`).set(newStudent);
-    db.ref("/nextId").set(nextId);
-    renderTabs(); renderStudents();
-    nameInp.value = ""; baseInp.value = "";
+
+    try {
+        // Транзакция арқылы ID алу — екі админ бір мезгілде қосса да қайталанбайды
+        const result = await db.ref("/nextId").transaction(current => (current || 1) + 1);
+        const newNextId = result.snapshot.val();
+        const id = newNextId - 1;
+        const newStudent = { id, name, class: cls, baseScore, scores: {} };
+        await db.ref(`/students/${id}`).set(newStudent);
+        students.push(newStudent);
+        nextId = newNextId;
+        renderTabs(); renderStudents();
+        nameInp.value = ""; baseInp.value = "";
+    } catch(e) {
+        alert("Қате: " + e.message);
+    }
 }
 function deleteStudent(id) {
     if (!isAdmin) return;
@@ -435,6 +473,7 @@ async function promoteAllClasses() {
 
     try {
         await db.ref().update(updates);
+        newClassesList.sort(classSortCompare);
         await db.ref("/classes").set(newClassesList);
 
         students = students
@@ -492,40 +531,40 @@ function editBaseScore(id) {
     if (val === null) return;
     const num = parseInt(val);
     if (isNaN(num)) return alert("Сан жазыңыз!");
-    db.ref(`/students/${id}/baseScore`).set(num);
+
+    s.baseScore = num;
+    s.lastUpdated = Date.now();
+    renderStudents();
+
+    db.ref(`/students/${id}`).update({ baseScore: num, lastUpdated: Date.now() });
 }
 function updateScore(id, key, increment) {
     if (!isAdmin) return;
-    const s = students.find(s => s.id === id);
-    if (!s) return;
-    const current = s.scores?.[key] || 0;
+    const student = students.find(s => s.id === id);
+    if (!student) return;
+    const current = student.scores?.[key] || 0;
     const delta = CRITERIA[key] || 0;
     const newVal = increment ? current + delta : current - delta;
-    // Локальды жаңарту — Firebase-ке қайта сұраныс жоқ
-    const student = students.find(s => s.id === id);
-    if (student) {
-        if (!student.scores) student.scores = {};
-        student.scores[key] = newVal;
-        student.lastUpdated = Date.now();
-        updateScoresInDOM();
-    }
-    db.ref(`/students/${id}`).update({ [`scores/${key}`]: newVal, lastUpdated: Date.now() });
-}
-function updateScoresInDOM() {
-    students.forEach(s => {
-        document.querySelectorAll(`.score-val[data-sid="${s.id}"]`).forEach(el => {
-            const key = el.getAttribute('data-key');
-            const val = s.scores?.[key] || 0;
-            el.textContent = val;
-            el.className = 'score-val' + (val > 0 ? ' pos' : val < 0 ? ' neg' : '');
-        });
-        const badge = document.querySelector(`.card-score-badge[data-sid="${s.id}"]`);
-        if (badge) {
-            const score = totalScore(s);
-            badge.textContent = `${score} балл`;
-            badge.className = 'card-score-badge' + (score > 0 ? ' pos' : score < 0 ? ' neg' : '');
-        }
+
+    student.scores = student.scores || {};
+    student.scores[key] = newVal;
+    student.lastUpdated = Date.now();
+
+    // Тек осы оқушының элементін жаңартамыз — барлық 297 оқушыны емес (баяулықтың басты себебі осы еді)
+    document.querySelectorAll(`.score-val[data-sid="${id}"]`).forEach(el => {
+        if (el.getAttribute('data-key') !== key) return;
+        el.textContent = newVal;
+        el.className = 'score-val' + (newVal > 0 ? ' pos' : newVal < 0 ? ' neg' : '');
     });
+    const badge = document.querySelector(`.card-score-badge[data-sid="${id}"]`);
+    if (badge) {
+        const score = totalScore(student);
+        badge.textContent = `${score} балл`;
+        badge.className = 'card-score-badge' + (score > 0 ? ' pos' : score < 0 ? ' neg' : '');
+    }
+
+    // Firebase-ке фонда жазамыз, экранды күттірмейміз
+    db.ref(`/students/${id}`).update({ [`scores/${key}`]: newVal, lastUpdated: Date.now() });
 }
 
 function totalScore(s) {
@@ -547,13 +586,14 @@ function renderTabs() {
         <button class="tab-btn ${activeTab==='stars'?'active':''}" onclick="setTab('stars')">⭐ Үздіктер</button>
     `;
     classes.forEach(cls => {
-        html += `<button class="tab-btn ${activeTab===cls?'active':''}" onclick="setTab('${cls}')">${cls}</button>`;
+        const safeCls = escapeHtml(cls);
+        html += `<button class="tab-btn ${activeTab===cls?'active':''}" onclick="setTab('${safeCls}')">${safeCls}</button>`;
     });
     tabs.innerHTML = html;
     const sel = document.getElementById("newClass");
     if (sel) {
         sel.innerHTML = `<option value="">— Сынып —</option>`;
-        classes.forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`);
+        classes.forEach(c => sel.innerHTML += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`);
     }
     const delBtn = document.getElementById("deleteClassBtn");
     if (delBtn) {
@@ -655,7 +695,7 @@ function renderStudents() {
             <div class="card-header">
                 <div style="display:flex;align-items:center;gap:14px">
                     <span style="font-family:'Unbounded',cursive;font-size:22px;font-weight:800;min-width:40px;${placeStyle}">${place}.</span>
-                    <div><span class="card-name">${s.name}</span><span class="card-class">${s.class}</span>${lastUpdated ? `<span style="font-size:11px;color:var(--text2);display:block;margin-top:2px">🕐 ${lastUpdated}</span>` : ''}</div>
+                    <div><span class="card-name">${escapeHtml(s.name)}</span><span class="card-class">${escapeHtml(s.class)}</span>${lastUpdated ? `<span style="font-size:11px;color:var(--text2);display:block;margin-top:2px">🕐 ${lastUpdated}</span>` : ''}</div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px">
                     ${s.baseScore ? `<span style="font-size:12px;color:var(--text2);background:rgba(255,255,255,0.06);padding:4px 10px;border-radius:20px;">🎯 Бастапқы: ${s.baseScore}</span>` : ''}
@@ -694,7 +734,7 @@ function renderTopPage() {
             const medal = (i === 0 || totalScore(s) !== prev) ? medals[i] : '';
             html += `<div class="card" style="animation-delay:${i*0.07}s">
                 <div class="card-header">
-                    <div><span style="font-size:22px">${medal}</span> <span class="card-name">${s.name}</span><span class="card-class">${s.class}</span></div>
+                    <div><span style="font-size:22px">${medal}</span> <span class="card-name">${escapeHtml(s.name)}</span><span class="card-class">${escapeHtml(s.class)}</span></div>
                     <div class="card-score-badge pos">${totalScore(s)} балл</div>
                 </div>
             </div>`;
@@ -704,7 +744,7 @@ function renderTopPage() {
     lowest.forEach((s, i) => {
         html += `<div class="card" style="border-left:3px solid var(--red);animation-delay:${i*0.07}s">
             <div class="card-header">
-                <div><span class="card-name">${s.name}</span><span class="card-class">${s.class}</span></div>
+                <div><span class="card-name">${escapeHtml(s.name)}</span><span class="card-class">${escapeHtml(s.class)}</span></div>
                 <div class="card-score-badge" style="background:linear-gradient(135deg,var(--red),#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${totalScore(s)} балл</div>
             </div>
         </div>`;
@@ -728,7 +768,7 @@ function renderClassRating() {
         const cnt = students.filter(s => s.class === cls).length;
         html += `<div class="class-card" style="border-left:4px solid ${border};animation-delay:${i*0.07}s">
             <div class="class-card-header">
-                <div class="class-card-name">${medal} ${cls} сыныбы</div>
+                <div class="class-card-name">${medal} ${escapeHtml(cls)} сыныбы</div>
                 <div class="class-card-score">${score} балл</div>
             </div>
             <div class="class-card-meta">${cnt} оқушы</div>
@@ -747,8 +787,8 @@ function renderTop3(top, allEqual) {
         const medal = (i === 0 || totalScore(s) !== prev) ? medals[i] : '—';
         html += `<div class="top3-card" style="animation-delay:${i*0.1}s">
             <div class="top3-medal">${medal}</div>
-            <div class="top3-name">${s.name}</div>
-            <div class="top3-class">${s.class}</div>
+            <div class="top3-name">${escapeHtml(s.name)}</div>
+            <div class="top3-class">${escapeHtml(s.class)}</div>
             <div class="top3-score">${totalScore(s)} балл</div>
         </div>`;
     });
@@ -887,7 +927,7 @@ function renderPostsTab(container, tabsHtml) {
                     ? `<img src="${p.photo}" class="post-card-img" alt="">`
                     : (p.text ? '' : `<div class="post-card-img-placeholder">📷</div>`)}
                 <div class="post-card-body">
-                    ${p.text ? `<div class="post-card-text">${p.text}</div>` : ''}
+                    ${p.text ? `<div class="post-card-text">${escapeHtml(p.text).replace(/\n/g, '<br>')}</div>` : ''}
                     ${date ? `<div class="post-card-date"><span style="display:inline-block;margin-right:4px">📅</span>${date}</div>` : ''}
                     ${isAdmin ? `<button class="btn-delete" style="margin-top:10px;width:100%;font-size:12px" onclick="deleteStarPost('${p.id}')">🗑 Өшіру</button>` : ''}
                 </div>
@@ -980,10 +1020,10 @@ function renderStudentsTab(container, tabsHtml) {
                 cardsHtml += `
                 <div class="star-card">
                     <div class="star-photo-wrap">
-                        ${s.photo ? `<img src="${s.photo}" class="star-photo" alt="${s.name}">` : `<div class="star-photo-placeholder">👤</div>`}
+                        ${s.photo ? `<img src="${s.photo}" class="star-photo" alt="${escapeHtml(s.name)}">` : `<div class="star-photo-placeholder">👤</div>`}
                     </div>
-                    <div class="star-award-badge">${s.award || ''}</div>
-                    <div class="star-name">${s.name}</div>
+                    <div class="star-award-badge">${escapeHtml(s.award || '')}</div>
+                    <div class="star-name">${escapeHtml(s.name)}</div>
                     ${isAdmin ? `
                         ${!s.photo ? `
                         <label style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;padding:7px;border-radius:8px;background:rgba(37,99,235,0.12);color:var(--blue3);border:1px dashed rgba(37,99,235,0.4);cursor:pointer;font-size:12px;font-weight:600;">
@@ -1002,8 +1042,8 @@ function renderStudentsTab(container, tabsHtml) {
             groupsHtml += `
             <div class="stars-month-group">
                 <div class="stars-month-title">
-                    <span class="stars-month-name">${g.month || ''}</span>
-                    ${g.year ? `<span class="stars-month-year">${g.year}</span>` : ''}
+                    <span class="stars-month-name">${escapeHtml(g.month || '')}</span>
+                    ${g.year ? `<span class="stars-month-year">${escapeHtml(g.year)}</span>` : ''}
                 </div>
                 ${cardsHtml}
             </div>`;
@@ -1062,17 +1102,24 @@ async function addStarPost() {
 
     const dateVal = document.getElementById("postDate").value;
     const ts = dateVal ? new Date(dateVal).getTime() : Date.now();
-    await db.ref("/starPosts").push().set({ text, photo, ts });
+    const postRef = db.ref("/starPosts").push();
+    await postRef.set({ text, photo, ts });
 
+    // Жаңа постты локальды тізімге қосып, бетті қайта сызамыз
+    starPosts.push({ id: postRef.key, text, photo, ts });
     document.getElementById("postText").value = "";
     document.getElementById("postPhoto").value = "";
     document.getElementById("postPhotoPreview").style.display = "none";
+    if (activeTab === "stars") renderStarsPage();
 }
 
 function deleteStarPost(id) {
     if (!isAdmin) return;
     if (!confirm("Өшіресіз бе?")) return;
-    db.ref(`/starPosts/${id}`).remove();
+    db.ref(`/starPosts/${id}`).remove().then(() => {
+        starPosts = starPosts.filter(p => p.id !== id);
+        if (activeTab === "stars") renderStarsPage();
+    }).catch(e => alert("Қате: " + e.message));
 }
 
 async function addStarStudent() {
@@ -1097,20 +1144,26 @@ async function addStarStudent() {
         }
     }
 
-    await db.ref("/starStudents").push().set({ name, year, month, award, photo });
+    const starRef = db.ref("/starStudents").push();
+    await starRef.set({ name, year, month, award, photo });
+
+    // Жаңа оқушыны локальды тізімге қосып, бетті қайта сызамыз
+    starStudents.push({ id: starRef.key, name, year, month, award, photo });
 
     // Тек аты мен фотоны тазалаймыз — қатырылған мәндер қалады
     document.getElementById("starName").value = "";
     document.getElementById("starPhoto").value = "";
     document.getElementById("starPhotoPreview").style.display = "none";
-    const lbl = document.querySelector(".star-photo-label span");
-    if (lbl) lbl.textContent = "📷 Фото таңдау";
+    if (activeTab === "stars") renderStarsPage();
 }
 
 function deleteStarStudent(id) {
     if (!isAdmin) return;
     if (!confirm("Өшіресіз бе?")) return;
-    db.ref(`/starStudents/${id}`).remove();
+    db.ref(`/starStudents/${id}`).remove().then(() => {
+        starStudents = starStudents.filter(s => s.id !== id);
+        if (activeTab === "stars") renderStarsPage();
+    }).catch(e => alert("Қате: " + e.message));
 }
 
 async function uploadStarPhoto(input, id) {
@@ -1122,6 +1175,9 @@ async function uploadStarPhoto(input, id) {
     try {
         const url = await uploadToCloudinary(file);
         await db.ref(`/starStudents/${id}/photo`).set(url);
+        const s = starStudents.find(s => s.id === id);
+        if (s) s.photo = url;
+        if (activeTab === "stars") renderStarsPage();
     } catch(e) {
         alert('Қате: ' + e.message);
         label.childNodes[0].textContent = origText;
