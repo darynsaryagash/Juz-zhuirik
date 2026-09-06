@@ -638,3 +638,14 @@ body::after {
     .header { padding: 0 14px; }
     .tabs-wrap { padding: 0 14px; }
 }
+
+/* Font Awesome иконкалар — эмодзидің орнына, мәтінмен тегіс тураланады */
+i.fa-solid, i.fa-regular {
+    display: inline-block;
+    vertical-align: -1px;
+    line-height: 1;
+}
+.star-photo-placeholder i, .card-photo-placeholder i {
+    font-size: 32px;
+    opacity: 0.5;
+}

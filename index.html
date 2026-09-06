@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Жүзден жүйрік</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
     <div class="glitch-overlay" id="glitchOverlay"></div>
@@ -21,19 +22,19 @@
     <header class="header">
         <div class="header-inner">
             <div class="logo">
-                <span class="logo-icon">🏆</span>
+                <span class="logo-icon"><i class="fa-solid fa-trophy"></i></span>
                 <div>
                     <div class="logo-title">Жүзден жүйрік</div>
                     <div class="logo-sub">Мектеп рейтинг жүйесі</div>
                 </div>
             </div>
             <div class="header-btns">
-                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Дизайн ауыстыру"><span class="icon-purple">🎨</span><span class="icon-blue">🎨</span></button>
+                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Дизайн ауыстыру"><span class="icon-purple"><i class="fa-solid fa-palette"></i></span><span class="icon-blue"><i class="fa-solid fa-palette"></i></span></button>
                 <button class="btn-login" id="loginBtn" onclick="adminLogin()">
-                    <span>🔐</span> Кіру
+                    <span><i class="fa-solid fa-right-to-bracket"></i></span> Кіру
                 </button>
                 <button class="btn-logout hidden" id="logoutBtn" onclick="adminLogout()">
-                    <span>👋</span> Шығу
+                    <span><i class="fa-solid fa-right-from-bracket"></i></span> Шығу
                 </button>
             </div>
         </div>
@@ -47,7 +48,7 @@
         <div id="adminPanel" class="admin-panel hidden">
             <div class="admin-grid">
                 <div class="admin-card">
-                    <div class="admin-card-icon">🏫</div>
+                    <div class="admin-card-icon"><i class="fa-solid fa-school"></i></div>
                     <h3>Жаңа сынып</h3>
                     <div class="input-group">
                         <input type="text" id="newClassName" placeholder="Мысалы: 8А" class="inp">
@@ -56,7 +57,7 @@
                     <button class="btn-delete-class hidden" id="deleteClassBtn" onclick="deleteClass(activeTab)"></button>
                 </div>
                 <div class="admin-card">
-                    <div class="admin-card-icon">👤</div>
+                    <div class="admin-card-icon"><i class="fa-solid fa-user"></i></div>
                     <h3>Жаңа оқушы</h3>
                     <div class="input-group">
                         <input type="text" id="newName" placeholder="Аты-жөні" class="inp">
@@ -68,29 +69,29 @@
                     </div>
                 </div>
                 <div class="admin-card">
-                    <div class="admin-card-icon">🎓</div>
+                    <div class="admin-card-icon"><i class="fa-solid fa-graduation-cap"></i></div>
                     <h3>Оқу жылын аяқтау</h3>
                     <p style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5;">Барлық сыныпты бір жылға көтереді (мыс. 8А → 9А). 11-сынып оқушылары автоматты түрде тізімнен өшіріледі (бітіруші).</p>
-                    <button class="btn-delete-class" style="display:block" onclick="promoteAllClasses()">🎓 Сыныпты бір жылға көтеру</button>
+                    <button class="btn-delete-class" style="display:block" onclick="promoteAllClasses()"><i class="fa-solid fa-graduation-cap"></i> Сыныпты бір жылға көтеру</button>
                 </div>
                 <div class="admin-card">
-                    <div class="admin-card-icon">⚠️</div>
+                    <div class="admin-card-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
                     <h3>Қауіпті аймақ</h3>
                     <p style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5;">Барлық оқушылардың балдарын (баллдар мен бастапқы баллды) нөлге түсіреді. Фотолар мен «Айдың үздіктері» тізімі өзгермейді.</p>
-                    <button class="btn-delete-class" style="display:block" onclick="resetAllScores()">🗑 Барлық баллды өшіру</button>
+                    <button class="btn-delete-class" style="display:block" onclick="resetAllScores()"><i class="fa-solid fa-trash"></i> Барлық баллды өшіру</button>
                 </div>
             </div>
         </div>
 
         <div class="search-wrap">
             <div class="search-box">
-                <span class="search-icon">🔍</span>
+                <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
                 <input type="text" id="filterInput" placeholder="Оқушы немесе сынып іздеу..." oninput="renderStudents()" class="search-inp">
             </div>
         </div>
 
         <div class="section-header">
-            <h2 id="sectionTitle">📊 Мектеп рейтингі</h2>
+            <h2 id="sectionTitle"><i class="fa-solid fa-chart-column"></i> Мектеп рейтингі</h2>
         </div>
 
         <div id="studentList" class="student-grid"></div>
@@ -102,7 +103,7 @@
     <!-- Модальное окно входа -->
     <div class="modal-overlay hidden" id="loginModal" onclick="if(event.target===this)closeLoginModal()">
         <div class="modal-box">
-            <div class="modal-icon">🔐</div>
+            <div class="modal-icon"><i class="fa-solid fa-right-to-bracket"></i></div>
             <h2 class="modal-title">Кіру</h2>
             <p class="modal-sub">Әкімші панеліне кіру</p>
             <div class="modal-field">

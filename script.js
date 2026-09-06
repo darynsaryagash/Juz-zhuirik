@@ -201,6 +201,13 @@ function escapeHtml(str) {
     }[ch]));
 }
 
+// Орын медальдары — эмодзидің орнына Font Awesome иконкалары
+const MEDAL_ICONS = [
+    '<i class="fa-solid fa-medal" style="color:#FFD700"></i>',
+    '<i class="fa-solid fa-medal" style="color:#C0C0C0"></i>',
+    '<i class="fa-solid fa-medal" style="color:#CD7F32"></i>'
+];
+
 let isAdmin = false, students = [], classes = [], nextId = 1, activeTab = "school";
 let updatingScore = false;
 
@@ -311,17 +318,17 @@ function loadNews() {
         }).catch(err => {
             const c = document.getElementById("newsChangelogList");
             if (c) c.innerHTML = `<div class="news-loading" style="color:#ef4444;opacity:1;line-height:1.8">
-                ⚠️ Қате: <b>${err.code || err.message}</b>
+                <i class="fa-solid fa-triangle-exclamation"></i> Қате: <b>${err.code || err.message}</b>
             </div>`;
         });
     } catch(e) {
         const c = document.getElementById("newsChangelogList");
-        if (c) c.innerHTML = `<div class="news-loading" style="color:#ef4444;opacity:1">⚠️ JS қатесі: ${e.message}</div>`;
+        if (c) c.innerHTML = `<div class="news-loading" style="color:#ef4444;opacity:1"><i class="fa-solid fa-triangle-exclamation"></i> JS қатесі: ${e.message}</div>`;
     }
 }
 
 function addNews() {
-    if (!isAdmin) { alert("❌ Алдымен кіріңіз! (Кіру батырмасын басыңыз)"); return; }
+    if (!isAdmin) { alert("Алдымен кіріңіз! (Кіру батырмасын басыңыз)"); return; }
     const version = document.getElementById("newsVersion").value.trim();
     const text = document.getElementById("newsText").value.trim();
     if (!version || !text) { alert("Версия мен мәтінді толтырыңыз!"); return; }
@@ -331,7 +338,7 @@ function addNews() {
         if (err) { alert("Қате: " + err.message); return; }
         document.getElementById("newsVersion").value = "";
         document.getElementById("newsText").value = "";
-        alert("✅ Жаңалық жарияланды!");
+        alert("Жаңалық жарияланды!");
         loadNews();
     });
 }
@@ -352,7 +359,7 @@ async function submitLogin() {
         await auth.signInWithEmailAndPassword(email, password);
         closeLoginModal();
     } catch(e) {
-        err.textContent = "Қате email немесе пароль! ❌";
+        err.innerHTML = 'Қате email немесе пароль! <i class="fa-solid fa-circle-xmark"></i>';
         btn.disabled = false; btn.textContent = "Кіру";
     }
 }
@@ -382,7 +389,7 @@ function deleteClass(cls) {
     if (!isAdmin) return;
     const studentsInClass = students.filter(s => s.class === cls);
     if (studentsInClass.length > 0) {
-        if (!confirm(`⚠️ "${cls}" сыныбында ${studentsInClass.length} оқушы бар!\n\nСыныпты өшірсеңіз, осы оқушылардың БАРЛЫҒЫ да толығымен өшіріледі. Жалғастырасыз ба?`)) return;
+        if (!confirm(`"${cls}" сыныбында ${studentsInClass.length} оқушы бар!\n\nСыныпты өшірсеңіз, осы оқушылардың БАРЛЫҒЫ да толығымен өшіріледі. Жалғастырасыз ба?`)) return;
         if (!confirm(`Соңғы рет сұраймыз: "${cls}" сыныбын және ондағы ${studentsInClass.length} оқушыны өшіресіз бе? Бұл әрекетті қайтара алмайсыз!`)) return;
     } else {
         if (!confirm(`"${cls}" сыныбын өшіресіз бе?`)) return;
@@ -433,7 +440,7 @@ function deleteStudent(id) {
 }
 async function promoteAllClasses() {
     if (!isAdmin) return;
-    if (!confirm("⚠️ Барлық сынып бір жылға көтеріледі (мыс. 8А → 9А). 11-сынып оқушылары тізімнен МҮЛДЕМ өшіріледі (бітірген болып саналады). Бұл әрекетті қайтара алмайсыз! Жалғастырасыз ба?")) return;
+    if (!confirm("Барлық сынып бір жылға көтеріледі (мыс. 8А → 9А). 11-сынып оқушылары тізімнен МҮЛДЕМ өшіріледі (бітірген болып саналады). Бұл әрекетті қайтара алмайсыз! Жалғастырасыз ба?")) return;
     if (!confirm("Соңғы рет сұраймыз: сенімдісіз бе? 11-сынып оқушылары қайтарылмастай өшіріледі.")) return;
 
     const classRegex = /^(\d+)(.*)$/;
@@ -494,7 +501,7 @@ async function promoteAllClasses() {
         }
 
         renderTabs(); renderStudents();
-        alert(`✅ Барлық сынып бір жылға көтерілді!${graduatedCount ? ` 🎓 ${graduatedCount} бітіруші (11-сынып) тізімнен өшірілді.` : ''}`);
+        alert(`Барлық сынып бір жылға көтерілді!${graduatedCount ? ` ${graduatedCount} бітіруші (11-сынып) тізімнен өшірілді.` : ''}`);
     } catch(e) {
         alert("Қате: " + e.message);
     }
@@ -502,7 +509,7 @@ async function promoteAllClasses() {
 
 async function resetAllScores() {
     if (!isAdmin) return;
-    if (!confirm("⚠️ БАРЛЫҚ оқушылардың балдары (баллдар + бастапқы балл) нөлге түсіріледі. Бұл әрекетті ЕШТЕҢЕмен қайтара алмайсыз! Жалғастырасыз ба?")) return;
+    if (!confirm("БАРЛЫҚ оқушылардың балдары (баллдар + бастапқы балл) нөлге түсіріледі. Бұл әрекетті ЕШТЕҢЕмен қайтара алмайсыз! Жалғастырасыз ба?")) return;
     if (!confirm("Соңғы рет сұраймыз: расымен барлық баллды өшіресіз бе? Фотолар мен «Айдың үздіктері» тізіміне тиіспейді.")) return;
 
     const updates = {};
@@ -518,7 +525,7 @@ async function resetAllScores() {
             localStorage.setItem('cache_students', JSON.stringify(students));
         } catch(e) {}
         renderStudents();
-        alert("✅ Барлық оқушының баллы өшірілді! Фотолар мен үздіктер сақталды.");
+        alert("Барлық оқушының баллы өшірілді! Фотолар мен үздіктер сақталды.");
     } catch(e) {
         alert("Қате: " + e.message);
     }
@@ -580,10 +587,10 @@ function renderTabs() {
     const tabs = document.getElementById("tabs");
     if (!tabs) return;
     let html = `
-        <button class="tab-btn ${activeTab==='school'?'active':''}" onclick="setTab('school')">🏫 Мектеп</button>
-        <button class="tab-btn ${activeTab==='top'?'active':''}" onclick="setTab('top')">🏆 Топ</button>
-        <button class="tab-btn ${activeTab==='classes'?'active':''}" onclick="setTab('classes')">📊 Сыныптар</button>
-        <button class="tab-btn ${activeTab==='stars'?'active':''}" onclick="setTab('stars')">⭐ Үздіктер</button>
+        <button class="tab-btn ${activeTab==='school'?'active':''}" onclick="setTab('school')"><i class="fa-solid fa-school"></i> Мектеп</button>
+        <button class="tab-btn ${activeTab==='top'?'active':''}" onclick="setTab('top')"><i class="fa-solid fa-trophy"></i> Топ</button>
+        <button class="tab-btn ${activeTab==='classes'?'active':''}" onclick="setTab('classes')"><i class="fa-solid fa-chart-column"></i> Сыныптар</button>
+        <button class="tab-btn ${activeTab==='stars'?'active':''}" onclick="setTab('stars')"><i class="fa-solid fa-star"></i> Үздіктер</button>
     `;
     classes.forEach(cls => {
         const safeCls = escapeHtml(cls);
@@ -599,7 +606,7 @@ function renderTabs() {
     if (delBtn) {
         if (classes.includes(activeTab)) {
             delBtn.classList.remove("hidden");
-            delBtn.textContent = `🗑 "${activeTab}" сыныбын өшіру`;
+            delBtn.innerHTML = `<i class="fa-solid fa-trash"></i> "${escapeHtml(activeTab)}" сыныбын өшіру`;
         } else {
             delBtn.classList.add("hidden");
         }
@@ -621,16 +628,15 @@ function renderStudents() {
         s.name.toLowerCase().includes(filterVal) || s.class.toLowerCase().includes(filterVal)
     );
 
-    document.getElementById("sectionTitle").textContent =
-        activeTab === "school" ? "📊 Мектеп рейтингі" : `📊 ${activeTab} сынып рейтингі`;
-
+    const titleEl = document.getElementById("sectionTitle");
     if (activeTab === "school") {
-        const titleEl = document.getElementById("sectionTitle");
-        titleEl.innerHTML = `📊 Мектеп рейтингі <span style="font-size:14px;font-weight:500;margin-left:12px;vertical-align:middle;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e;margin-right:5px;animation:pulse 1.5s infinite;vertical-align:middle"></span><span id="onlineCount">${onlineCount}</span> онлайн</span>`;
+        titleEl.innerHTML = `<i class="fa-solid fa-chart-column"></i> Мектеп рейтингі <span style="font-size:14px;font-weight:500;margin-left:12px;vertical-align:middle;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e;margin-right:5px;animation:pulse 1.5s infinite;vertical-align:middle"></span><span id="onlineCount">${onlineCount}</span> онлайн</span>`;
+    } else {
+        titleEl.innerHTML = `<i class="fa-solid fa-chart-column"></i> ${escapeHtml(activeTab)} сынып рейтингі`;
     }
 
     if (filtered.length === 0) {
-        container.innerHTML = `<div class="no-results">Оқушылар табылмады 🔍</div>`;
+        container.innerHTML = `<div class="no-results">Оқушылар табылмады <i class="fa-solid fa-magnifying-glass"></i></div>`;
         top3box.innerHTML = ""; return;
     }
 
@@ -695,16 +701,16 @@ function renderStudents() {
             <div class="card-header">
                 <div style="display:flex;align-items:center;gap:14px">
                     <span style="font-family:'Unbounded',cursive;font-size:22px;font-weight:800;min-width:40px;${placeStyle}">${place}.</span>
-                    <div><span class="card-name">${escapeHtml(s.name)}</span><span class="card-class">${escapeHtml(s.class)}</span>${lastUpdated ? `<span style="font-size:11px;color:var(--text2);display:block;margin-top:2px">🕐 ${lastUpdated}</span>` : ''}</div>
+                    <div><span class="card-name">${escapeHtml(s.name)}</span><span class="card-class">${escapeHtml(s.class)}</span>${lastUpdated ? `<span style="font-size:11px;color:var(--text2);display:block;margin-top:2px"><i class="fa-regular fa-clock"></i> ${lastUpdated}</span>` : ''}</div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px">
-                    ${s.baseScore ? `<span style="font-size:12px;color:var(--text2);background:rgba(255,255,255,0.06);padding:4px 10px;border-radius:20px;">🎯 Бастапқы: ${s.baseScore}</span>` : ''}
+                    ${s.baseScore ? `<span style="font-size:12px;color:var(--text2);background:rgba(255,255,255,0.06);padding:4px 10px;border-radius:20px;"><i class="fa-solid fa-bullseye"></i> Бастапқы: ${s.baseScore}</span>` : ''}
                     <div class="card-score-badge ${scoreClass}" data-sid="${s.id}">${score} балл</div>
                 </div>
             </div>
-            <button class="toggle-btn" onclick="toggleCriteria(this)">📋 Критерийлер</button>
+            <button class="toggle-btn" onclick="toggleCriteria(this)"><i class="fa-solid fa-clipboard-list"></i> Критерийлер</button>
             <div class="criteria-body" style="display:none">${criteriaHtml}</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">${isAdmin ? `<button class="btn-delete" onclick="deleteStudent(${s.id})">🗑 Өшіру</button><button class="btn-delete" style="color:var(--blue3);border-color:rgba(37,99,235,0.3);background:rgba(37,99,235,0.1)" onclick="editBaseScore(${s.id})">✏️ Бастапқы балл</button>` : ''}</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">${isAdmin ? `<button class="btn-delete" onclick="deleteStudent(${s.id})"><i class="fa-solid fa-trash"></i> Өшіру</button><button class="btn-delete" style="color:var(--blue3);border-color:rgba(37,99,235,0.3);background:rgba(37,99,235,0.1)" onclick="editBaseScore(${s.id})"><i class="fa-solid fa-pen"></i> Бастапқы балл</button>` : ''}</div>
         `;
         container.appendChild(card);
     });
@@ -716,7 +722,7 @@ function renderStudents() {
 }
 
 function renderTopPage() {
-    document.getElementById("sectionTitle").textContent = "🏆 Топ оқушылар";
+    document.getElementById("sectionTitle").innerHTML = '<i class="fa-solid fa-trophy"></i> Топ оқушылар';
     document.getElementById("top3").innerHTML = "";
     const container = document.getElementById("studentList");
     if (students.length === 0) { container.innerHTML = `<div class="no-results">Оқушылар жоқ</div>`; return; }
@@ -724,12 +730,12 @@ function renderTopPage() {
     const sortedAsc = [...students].sort((a, b) => totalScore(a) - totalScore(b));
     const highest = sortedDesc.filter(s => totalScore(s) > 0).slice(0, 3);
     const lowest = sortedAsc.slice(0, 3);
-    let html = `<div class="top-header gold">🥇 Ең жоғары балл алғандар</div>`;
+    let html = `<div class="top-header gold">${MEDAL_ICONS[0]} Ең жоғары балл алғандар</div>`;
     if (highest.length === 0) {
         html += `<div class="no-results" style="padding:20px">Балл алған оқушы жоқ</div>`;
     } else {
         highest.forEach((s, i) => {
-            const medals = ["🥇","🥈","🥉"];
+            const medals = MEDAL_ICONS;
             const prev = i > 0 ? totalScore(highest[i-1]) : null;
             const medal = (i === 0 || totalScore(s) !== prev) ? medals[i] : '';
             html += `<div class="card" style="animation-delay:${i*0.07}s">
@@ -740,7 +746,7 @@ function renderTopPage() {
             </div>`;
         });
     }
-    html += `<div class="top-header red" style="margin-top:30px">⚠️ Ең төмен балл</div>`;
+    html += `<div class="top-header red" style="margin-top:30px"><i class="fa-solid fa-triangle-exclamation"></i> Ең төмен балл</div>`;
     lowest.forEach((s, i) => {
         html += `<div class="card" style="border-left:3px solid var(--red);animation-delay:${i*0.07}s">
             <div class="card-header">
@@ -753,12 +759,12 @@ function renderTopPage() {
 }
 
 function renderClassRating() {
-    document.getElementById("sectionTitle").textContent = "📊 Сыныптар рейтингі";
+    document.getElementById("sectionTitle").innerHTML = '<i class="fa-solid fa-chart-column"></i> Сыныптар рейтингі';
     document.getElementById("top3").innerHTML = "";
     const container = document.getElementById("studentList");
     if (classes.length === 0) { container.innerHTML = `<div class="no-results">Сыныптар жоқ</div>`; return; }
     const sorted = [...classes].sort((a, b) => classTotal(b) - classTotal(a));
-    const medals = ["🥇","🥈","🥉"];
+    const medals = MEDAL_ICONS;
     const borders = ["#FFD700","#C0C0C0","#CD7F32"];
     let html = '';
     sorted.forEach((cls, i) => {
@@ -780,7 +786,7 @@ function renderClassRating() {
 function renderTop3(top, allEqual) {
     const box = document.getElementById("top3");
     if (!top || top.length === 0 || allEqual) { box.innerHTML = ""; return; }
-    const medals = ["🥇","🥈","🥉"];
+    const medals = MEDAL_ICONS;
     let html = `<div class="top3-wrap">`;
     top.forEach((s, i) => {
         const prev = i > 0 ? totalScore(top[i-1]) : null;
@@ -800,7 +806,7 @@ function toggleCriteria(btn) {
     const body = btn.nextElementSibling;
     const isOpen = body.style.display !== 'none';
     body.style.display = isOpen ? 'none' : 'block';
-    btn.textContent = isOpen ? '📋 Критерийлер' : '🔼 Жабу';
+    btn.innerHTML = isOpen ? '<i class="fa-solid fa-clipboard-list"></i> Критерийлер' : '<i class="fa-solid fa-chevron-up"></i> Жабу';
     btn.classList.toggle('open', !isOpen);
 }
 
@@ -833,7 +839,7 @@ function loadStarPosts() {
     });
 }
 
-// 🔒 Қатырылған мәндер
+// Қатырылған мәндер
 let lockedMonth = null;
 let lockedYear  = null;
 let lockedAward = null;
@@ -869,14 +875,14 @@ function loadStarStudents() {
 
 function renderStarsPage() {
     document.getElementById("top3").innerHTML = "";
-    document.getElementById("sectionTitle").textContent = "⭐ Үздік оқушылар";
+    document.getElementById("sectionTitle").innerHTML = '<i class="fa-solid fa-star"></i> Үздік оқушылар';
     const container = document.getElementById("studentList");
 
     // Екі вкладка: Жаңалықтар / Ай үздіктері
     const tabsHtml = `
     <div class="stars-tabs">
-        <button class="stars-tab-btn ${starsSubTab==='posts'?'active':''}" onclick="starsSubTab='posts';renderStarsPage()">📰 Жаңалықтар</button>
-        <button class="stars-tab-btn ${starsSubTab==='students'?'active':''}" onclick="starsSubTab='students';renderStarsPage()">🏆 Ай үздіктері</button>
+        <button class="stars-tab-btn ${starsSubTab==='posts'?'active':''}" onclick="starsSubTab='posts';renderStarsPage()"><i class="fa-solid fa-newspaper"></i> Жаңалықтар</button>
+        <button class="stars-tab-btn ${starsSubTab==='students'?'active':''}" onclick="starsSubTab='students';renderStarsPage()"><i class="fa-solid fa-trophy"></i> Ай үздіктері</button>
     </div>`;
 
     if (starsSubTab === 'posts') {
@@ -891,27 +897,27 @@ function renderPostsTab(container, tabsHtml) {
     if (isAdmin) {
         adminHtml = `
         <div class="stars-add-form">
-            <div class="admin-card-icon">📰</div>
+            <div class="admin-card-icon"><i class="fa-solid fa-newspaper"></i></div>
             <h3 style="font-family:'Unbounded',cursive;font-size:13px;color:var(--text2);margin-bottom:14px;">Жаңалық қосу</h3>
             <div class="input-group">
                 <label class="star-photo-label">
-                    <span>🖼 Сурет таңдау</span>
+                    <span><i class="fa-solid fa-image"></i> Сурет таңдау</span>
                     <input type="file" id="postPhoto" accept="image/*" onchange="previewPostPhoto(this)" style="display:none">
                 </label>
                 <img id="postPhotoPreview" style="display:none;width:100%;max-height:200px;object-fit:cover;border-radius:12px;margin:4px 0;border:2px solid var(--blue)">
                 <textarea id="postText" placeholder="Мәтін жазыңыз..." class="inp" style="min-height:80px;resize:vertical;font-family:'Inter',sans-serif"></textarea>
                 <div style="display:flex;gap:8px;align-items:center">
                     <input type="date" id="postDate" class="inp" style="flex:1" value="${new Date().toISOString().split('T')[0]}">
-                    <button onclick="document.getElementById('postDate').value=new Date().toISOString().split('T')[0]" style="padding:9px 13px;border-radius:10px;border:none;background:rgba(255,255,255,0.08);color:var(--text2);cursor:pointer;font-size:13px;white-space:nowrap">📅 Бүгін</button>
+                    <button onclick="document.getElementById('postDate').value=new Date().toISOString().split('T')[0]" style="padding:9px 13px;border-radius:10px;border:none;background:rgba(255,255,255,0.08);color:var(--text2);cursor:pointer;font-size:13px;white-space:nowrap"><i class="fa-solid fa-calendar-day"></i> Бүгін</button>
                 </div>
-                <button class="btn-add" onclick="addStarPost()">➕ Қосу</button>
+                <button class="btn-add" onclick="addStarPost()"><i class="fa-solid fa-plus"></i> Қосу</button>
             </div>
         </div>`;
     }
 
     let postsHtml = "";
     if (starPosts.length === 0) {
-        postsHtml = `<div class="no-results">Жаңалықтар әлі қосылмаған 📰</div>`;
+        postsHtml = `<div class="no-results">Жаңалықтар әлі қосылмаған <i class="fa-solid fa-newspaper"></i></div>`;
     } else {
         // Жаңасы бірінші
         const sorted = [...starPosts].sort((a, b) => (b.ts || 0) - (a.ts || 0));
@@ -925,11 +931,11 @@ function renderPostsTab(container, tabsHtml) {
             <div class="post-card">
                 ${p.photo
                     ? `<img src="${p.photo}" class="post-card-img" alt="">`
-                    : (p.text ? '' : `<div class="post-card-img-placeholder">📷</div>`)}
+                    : (p.text ? '' : `<div class="post-card-img-placeholder"><i class="fa-solid fa-camera"></i></div>`)}
                 <div class="post-card-body">
                     ${p.text ? `<div class="post-card-text">${escapeHtml(p.text).replace(/\n/g, '<br>')}</div>` : ''}
-                    ${date ? `<div class="post-card-date"><span style="display:inline-block;margin-right:4px">📅</span>${date}</div>` : ''}
-                    ${isAdmin ? `<button class="btn-delete" style="margin-top:10px;width:100%;font-size:12px" onclick="deleteStarPost('${p.id}')">🗑 Өшіру</button>` : ''}
+                    ${date ? `<div class="post-card-date"><span style="display:inline-block;margin-right:4px"><i class="fa-solid fa-calendar-day"></i></span>${date}</div>` : ''}
+                    ${isAdmin ? `<button class="btn-delete" style="margin-top:10px;width:100%;font-size:12px" onclick="deleteStarPost('${p.id}')"><i class="fa-solid fa-trash"></i> Өшіру</button>` : ''}
                 </div>
             </div>`;
         });
@@ -957,18 +963,18 @@ function renderStudentsTab(container, tabsHtml) {
 
         adminHtml = `
         <div class="stars-add-form">
-            <div class="admin-card-icon">⭐</div>
+            <div class="admin-card-icon"><i class="fa-solid fa-star"></i></div>
             <h3 style="font-family:'Unbounded',cursive;font-size:13px;color:var(--text2);margin-bottom:14px;">Үздік оқушы қосу</h3>
             <div class="input-group">
 
                 <div style="display:flex;gap:8px;align-items:center">
                     <select id="starMonth" class="inp" style="flex:1" onchange="starsSelectedMonth=this.value" ${lockedMonth ? 'disabled' : ''}>${monthOptions}</select>
-                    <button onclick="toggleLock('Month')" style="${lockStyle(lockedMonth)}">${lockedMonth ? '🔒' : '🔓'}</button>
+                    <button onclick="toggleLock('Month')" style="${lockStyle(lockedMonth)}">${lockedMonth ? '<i class="fa-solid fa-lock"></i>' : '<i class="fa-solid fa-lock-open"></i>'}</button>
                 </div>
 
                 <div style="display:flex;gap:8px;align-items:center">
                     <input type="text" id="starYear" placeholder="Оқу жылы (мыс: 2025-2026)" class="inp" style="flex:1" value="${lockedYear || ''}" ${lockedYear ? 'readonly' : ''}>
-                    <button onclick="toggleLock('Year')" style="${lockStyle(lockedYear)}">${lockedYear ? '🔒' : '🔓'}</button>
+                    <button onclick="toggleLock('Year')" style="${lockStyle(lockedYear)}">${lockedYear ? '<i class="fa-solid fa-lock"></i>' : '<i class="fa-solid fa-lock-open"></i>'}</button>
                 </div>
 
                 <input type="text" id="starName" placeholder="Аты-жөні" class="inp">
@@ -976,23 +982,23 @@ function renderStudentsTab(container, tabsHtml) {
                 <div style="display:flex;gap:8px;align-items:center">
                     <select id="starAward" class="inp" style="flex:1" ${lockedAward ? 'disabled' : ''}>
                         ${awardOptions}
-                        <option value="__custom__">✏️ Өз атауым...</option>
+                        <option value="__custom__">Өз атауым...</option>
                     </select>
-                    <button onclick="toggleLock('Award')" style="${lockStyle(lockedAward)}">${lockedAward ? '🔒' : '🔓'}</button>
+                    <button onclick="toggleLock('Award')" style="${lockStyle(lockedAward)}">${lockedAward ? '<i class="fa-solid fa-lock"></i>' : '<i class="fa-solid fa-lock-open"></i>'}</button>
                 </div>
                 <input type="text" id="starAwardCustom" placeholder="Марапат атауы..." class="inp" style="display:none">
 
                 ${lockedMonth || lockedYear || lockedAward ? `
                 <div style="font-size:12px;color:var(--blue3);background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.2);border-radius:10px;padding:8px 12px;">
-                    🔒 Қатырылған: ${[lockedMonth, lockedYear, lockedAward].filter(Boolean).join(' · ')}
+                    <i class="fa-solid fa-lock"></i> Қатырылған: ${[lockedMonth, lockedYear, lockedAward].filter(Boolean).join(' · ')}
                 </div>` : ''}
 
                 <label class="star-photo-label">
-                    <span>📷 Фото таңдау</span>
+                    <span><i class="fa-solid fa-camera"></i> Фото таңдау</span>
                     <input type="file" id="starPhoto" accept="image/*" onchange="previewStarPhoto(this)" style="display:none">
                 </label>
                 <img id="starPhotoPreview" style="display:none;width:100px;height:100px;object-fit:cover;border-radius:10px;margin:8px auto;border:2px solid var(--blue3)">
-                <button class="btn-add" onclick="addStarStudent()">➕ Қосу</button>
+                <button class="btn-add" onclick="addStarStudent()"><i class="fa-solid fa-plus"></i> Қосу</button>
             </div>
         </div>`;
     }
@@ -1011,7 +1017,7 @@ function renderStudentsTab(container, tabsHtml) {
 
     let groupsHtml = "";
     if (groupKeys.length === 0) {
-        groupsHtml = isAdmin ? "" : `<div class="no-results">Үздік оқушылар әлі қосылмаған 🌟</div>`;
+        groupsHtml = isAdmin ? "" : `<div class="no-results">Үздік оқушылар әлі қосылмаған <i class="fa-solid fa-star"></i></div>`;
     } else {
         groupKeys.forEach(key => {
             const g = grouped[key];
@@ -1020,21 +1026,21 @@ function renderStudentsTab(container, tabsHtml) {
                 cardsHtml += `
                 <div class="star-card">
                     <div class="star-photo-wrap">
-                        ${s.photo ? `<img src="${s.photo}" class="star-photo" alt="${escapeHtml(s.name)}">` : `<div class="star-photo-placeholder">👤</div>`}
+                        ${s.photo ? `<img src="${s.photo}" class="star-photo" alt="${escapeHtml(s.name)}">` : `<div class="star-photo-placeholder"><i class="fa-solid fa-user"></i></div>`}
                     </div>
                     <div class="star-award-badge">${escapeHtml(s.award || '')}</div>
                     <div class="star-name">${escapeHtml(s.name)}</div>
                     ${isAdmin ? `
                         ${!s.photo ? `
                         <label style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;padding:7px;border-radius:8px;background:rgba(37,99,235,0.12);color:var(--blue3);border:1px dashed rgba(37,99,235,0.4);cursor:pointer;font-size:12px;font-weight:600;">
-                            📷 Фото қос
+                            <span class="label-text"><i class="fa-solid fa-camera"></i> Фото қос</span>
                             <input type="file" accept="image/*" style="display:none" onchange="uploadStarPhoto(this,'${s.id}')">
                         </label>` : `
                         <label style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;padding:7px;border-radius:10px;background:rgba(37,99,235,0.08);color:var(--text2);border:1px dashed var(--border);cursor:pointer;font-size:12px;">
-                            🔄 Ауыстыру
+                            <span class="label-text"><i class="fa-solid fa-arrows-rotate"></i> Ауыстыру</span>
                             <input type="file" accept="image/*" style="display:none" onchange="uploadStarPhoto(this,'${s.id}')">
                         </label>`}
-                        <button class="btn-delete" style="margin-top:6px;width:100%;font-size:12px" onclick="deleteStarStudent('${s.id}')">🗑 Өшіру</button>
+                        <button class="btn-delete" style="margin-top:6px;width:100%;font-size:12px" onclick="deleteStarStudent('${s.id}')"><i class="fa-solid fa-trash"></i> Өшіру</button>
                     ` : ''}
                 </div>`;
             });
@@ -1068,7 +1074,7 @@ function previewStarPhoto(input) {
         const preview = document.getElementById("starPhotoPreview");
         preview.src = e.target.result; preview.style.display = "block";
         const label = document.querySelector(".star-photo-label span");
-        if (label) label.textContent = "✅ " + file.name;
+        if (label) label.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + escapeHtml(file.name);
     };
     reader.readAsDataURL(file);
 }
@@ -1080,7 +1086,7 @@ function previewPostPhoto(input) {
         const preview = document.getElementById("postPhotoPreview");
         preview.src = e.target.result; preview.style.display = "block";
         const label = document.querySelector("#postPhoto").closest('label').querySelector('span');
-        if (label) label.textContent = "✅ " + file.name;
+        if (label) label.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + escapeHtml(file.name);
     };
     reader.readAsDataURL(file);
 }
@@ -1170,8 +1176,9 @@ async function uploadStarPhoto(input, id) {
     const file = input.files[0];
     if (!file) return;
     const label = input.closest('label');
-    const origText = label.childNodes[0].textContent;
-    label.childNodes[0].textContent = '⏳ Жүктелуде...';
+    const textEl = label.querySelector('.label-text');
+    const origHtml = textEl.innerHTML;
+    textEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Жүктелуде...';
     try {
         const url = await uploadToCloudinary(file);
         await db.ref(`/starStudents/${id}/photo`).set(url);
@@ -1180,6 +1187,6 @@ async function uploadStarPhoto(input, id) {
         if (activeTab === "stars") renderStarsPage();
     } catch(e) {
         alert('Қате: ' + e.message);
-        label.childNodes[0].textContent = origText;
+        textEl.innerHTML = origHtml;
     }
 }
