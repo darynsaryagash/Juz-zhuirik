@@ -181,7 +181,7 @@ const SECTIONS = [
     ]},
     { title: "Х бөлім: Спорттағы жетістік (әр жетістігі үшін)", criteria: [
         { key: "Спорт: Жүлдегер атанса", score: 5 },
-        { key: "Спорт: Жарыста финалға шықса/белсенді қатысса", score: 4 },
+        { key: "Спорт: Жарыста финалға шықса немесе белсенді қатысса", score: 4 },
         { key: "Спорт: Жарысқа қатысса", score: 3 },
         { key: "Спорт: Секцияға (жаттығуға) тұрақты қатысса", score: 2 },
         { key: "Спорт: Спорттық іс-шараға бір рет қатысса", score: 1 },
@@ -212,6 +212,42 @@ const MEDAL_ICONS = [
     '<i class="fa-solid fa-medal" style="color:#CD7F32"></i>'
 ];
 
+// ── Firebase кілттерінде "/" болмауы керек: ол жол (path) деп түсініледі де, мән вложенный объект болып қалады ──
+const SLASH_REPLACEMENT = " немесе ";
+let pendingFixes = {}; // { studentId: { "scores/кілт": мән } } — Firebase-те түзетуді күтіп тұрғандар
+
+// Бұрын "/" салдарынан бүлінген (вложенный) баллдарды қалыпты күйге келтіреді
+function normalizeScores(s) {
+    if (!s.scores || typeof s.scores !== 'object') { s.scores = {}; return null; }
+    const isBad = v => typeof v !== 'number';
+    if (!Object.values(s.scores).some(isBad)) return null;
+
+    const flat = {}, updates = {}, changed = new Set();
+    const walk = (val, path, topKey) => {
+        if (val && typeof val === 'object') {
+            Object.entries(val).forEach(([k, v]) => walk(v, path + "/" + k, topKey));
+        } else {
+            const key = path.replace(/\//g, SLASH_REPLACEMENT);
+            flat[key] = (flat[key] || 0) + (Number(val) || 0);
+            changed.add(key);
+        }
+    };
+    Object.entries(s.scores).forEach(([k, v]) => {
+        if (typeof v === 'number') { flat[k] = (flat[k] || 0) + v; return; }
+        if (v && typeof v === 'object') updates[`scores/${k}`] = null; // ескі вложенный түйінді өшіру
+        walk(v, k, k);
+    });
+    changed.forEach(k => { updates[`scores/${k}`] = flat[k]; });
+    s.scores = flat;
+    return updates;
+}
+function persistPendingFixes() {
+    if (!isAdmin) return;
+    Object.entries(pendingFixes).forEach(([id, updates]) => {
+        db.ref(`/students/${id}`).update(updates).then(() => { delete pendingFixes[id]; }).catch(() => {});
+    });
+}
+
 let isAdmin = false, students = [], classes = [], nextId = 1, activeTab = "school";
 let updatingScore = false;
 
@@ -220,6 +256,7 @@ auth.onAuthStateChanged(user => {
     document.getElementById("adminPanel").classList.toggle("hidden", !isAdmin);
     document.getElementById("loginBtn").classList.toggle("hidden", isAdmin);
     document.getElementById("logoutBtn").classList.toggle("hidden", !isAdmin);
+    persistPendingFixes();
     renderTabs(); renderStudents();
 });
 
@@ -233,6 +270,7 @@ function loadData() {
         const cc = localStorage.getItem('cache_classes');
         if (cs && cc) {
             students = JSON.parse(cs);
+            students.forEach(normalizeScores);
             classes = JSON.parse(cc);
             dataLoaded = true;
             renderTabs();
@@ -247,6 +285,11 @@ function loadData() {
     ]).then(([snap, snap2]) => {
         const d = snap.val() || {};
         students = Object.values(d);
+        students.forEach(st => {
+            const fix = normalizeScores(st);
+            if (fix) pendingFixes[st.id] = fix;
+        });
+        persistPendingFixes();
         classes = (snap2.val() || []).slice().sort(classSortCompare);
         dataLoaded = true;
         try {
@@ -580,8 +623,8 @@ function updateScore(id, key, increment) {
 
 function totalScore(s) {
     const base = s.baseScore || 0;
-    const sc = s.scores ? Object.values(s.scores).reduce((a, b) => a + b, 0) : 0;
-    return base + sc;
+    const sc = s.scores ? Object.values(s.scores).reduce((a, b) => a + (typeof b === 'number' ? b : 0), 0) : 0;
+    return (Number(base) || 0) + sc;
 }
 function classTotal(cls) {
     return students.filter(s => s.class === cls).reduce((sum, s) => sum + totalScore(s), 0);
